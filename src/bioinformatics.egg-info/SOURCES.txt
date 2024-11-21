@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+src/bioinformatics.egg-info/PKG-INFO
+src/bioinformatics.egg-info/SOURCES.txt
+src/bioinformatics.egg-info/dependency_links.txt
+src/bioinformatics.egg-info/requires.txt
+src/bioinformatics.egg-info/top_level.txt
