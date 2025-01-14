@@ -1,20 +1,9 @@
-FROM tensorflow/tensorflow:latest-gpu-jupyter
+FROM athbaltzis/esmfold:1.1.0
 
-WORKDIR /usr/src/work
+RUN useradd -ms /bin/bash bio
+USER bio
 
-COPY ./pyproject.toml ./pyproject.toml
-COPY ./README.md ./README.md
-
-RUN apt-get update -y
-
-RUN apt-get install graphviz -y
-
-RUN python3 -m pip install --upgrade pip
-
-RUN pip install .[all]
-
-RUN pip install jupyterlab pydot pydot_ng
-
-EXPOSE 8888
-
-CMD ["jupyter", "lab", "--ip='*'", "--port=8888", "--no-browser", "--allow-root"]
+COPY requirements.txt .
+RUN pip install -v -r requirements.txt
+RUN python -c 'import esm; esm.pretrained.esmfold_v1()'
+RUN python -c 'import pyrosetta_installer; pyrosetta_installer.install_pyrosetta()'

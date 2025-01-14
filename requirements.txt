@@ -1,0 +1,4 @@
+biotite==0.40.0
+pygad==3.4.0
+pyrosetta-installer==0.1.2
+numpy==1.21.2

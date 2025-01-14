@@ -1,3 +1,6 @@
 .ipynb_checkpoints/
+.docker-built
+**/*.egg-info/
 build/
 .venv/
+repos/
