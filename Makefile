@@ -29,12 +29,15 @@ run: build
 		--name $(CONTAINER_NAME) \
 		--gpus all \
 		--rm -it \
-		-v ./notebooks:/usr/src/work/notebooks \
-		-v ./figures:/usr/src/work/figures \
-		-v ./src:/usr/src/work/src \
-		-v ./data:/usr/src/work/data \
-		-v ./scripts:/usr/src/work/scripts \
+		-v ./:/usr/src/work/ \
+    	-w /usr/src/work \
 		$(IMAGE_NAME):$(IMAGE_TAG)
+		# -v ./notebooks:/usr/src/work/notebooks \
+		# -v ./figures:/usr/src/work/figures \
+		# -v ./src:/usr/src/work/src \
+		# -v ./data:/usr/src/work/data \
+		# -v ./scripts:/usr/src/work/scripts \
+		# -v ./main.py:/usr/src/work/main.py \
 
 # Stop the container
 
