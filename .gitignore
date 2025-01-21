@@ -1,7 +1,10 @@
 .ipynb_checkpoints/
 .docker-built
+protein_index/
+genetic/
 **/*.egg-info/
 **/__pycache__/**
 build/
 .venv/
 repos/
+*.log
