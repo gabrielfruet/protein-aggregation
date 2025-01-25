@@ -1,10 +1,14 @@
+from datetime import datetime
 import logging
 import logging.config
+from pathlib import Path
 from typing import Union
 
 class ExcludePyrosettaFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> Union[bool,logging.LogRecord]:
         return 'pyrosetta' not in record.name 
+
+LOG_DIR = Path('./log')
 
 # Logging configuration using dictConfig
 LOGGING_CONFIG = {
@@ -33,7 +37,7 @@ LOGGING_CONFIG = {
             'level': 'DEBUG',
             'formatter': 'default',
             'filters': ['exclude_pyrosetta'],
-            'filename': 'app.log',
+            'filename': LOG_DIR/datetime.now().strftime('%d-%m-%Y-%H-%M-%S.log'),
             'mode': 'w',
         },
     },
