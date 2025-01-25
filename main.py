@@ -1,27 +1,22 @@
-import numpy as np
-import time
+from src.logging.config import config_logging
+config_logging()
+# start of script
+
+from matplotlib import pyplot as plt
+
+from src.genetic.instance import EnergyMaximizerGA
 
 if __name__ == '__main__':
-    from src.protein.model import SequenceScorePredictor 
-    ssp = SequenceScorePredictor()
-    sequence = "GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA"
 
-    def generate_initial_population(protein, population_size):
-        population = []
-        for _ in range(population_size):
-            protein_array = list(protein)
-            mutation_idx = np.random.randint(len(protein_array))
-            protein_array[mutation_idx] = np.random.choice(list("ACDEFGHIKLMNPQRSTVWY"))
-            aa_seq = ''.join(protein_array)
-            population.append(aa_seq)
-        return population
+    emga = EnergyMaximizerGA(
+        population_size=64, 
+        num_parents_mating=32,
+        crossover_type='uniform',
+        mutation_type='',
+        crossover_probability=0.2,
+        mutation_probability = [4/51, 1/51],
+    )
 
-    population = generate_initial_population(sequence, 10)
-    print('Starting the energy calculation')
-    start = time.perf_counter_ns()
-    energies = ssp(population)
-    print(f'Took {(time.perf_counter_ns() - start)*10e-9:.3f} seconds')
+    emga.run()
 
-    for energy, sequence in zip(energies, population):
-        print(f'For this sequence {sequence=} we have this energy {energy=}')
 
