@@ -4,6 +4,7 @@ from pyrosetta.rosetta.core.import_pose import pose_from_pdbstring
 import torch
 import esm
 import logging
+from multiprocessing import Pool
 
 from src.protein.rosetta import rosetta_init
 from src.protein.index import ProteinIndex
@@ -72,7 +73,8 @@ class SequenceScorePredictor:
 
         timer_logger.start(f'evaluation of {len(sequences)} FOLDED structure scores', timer='folded')
 
-        result = [self.scorer(pdb) for pdb in pdbs]
+        with Pool(processes=4) as pool:
+            result = pool.map(self.scorer, pdbs)
 
         timer_logger.end('folded')
 
