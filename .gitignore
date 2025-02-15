@@ -9,3 +9,17 @@ build/
 repos/
 *.log
 logs/
+
+
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.snm
+*.nav
+*.vrb
