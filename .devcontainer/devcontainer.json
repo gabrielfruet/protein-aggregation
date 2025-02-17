@@ -3,13 +3,5 @@
     "image": "bioinformatics:latest",
     "containerUser": "bio",
     "runArgs": ["-w","/workspaces/bioinformatics"],
-    "mounts": [
-        "type=bind,source=${localEnv:HOME}/.config/nvim,target=/home/bio/.config/nvim",
-        "type=bind,source=${localEnv:HOME}/.local/share/nvim,target=/home/bio/.local/share/nvim",
-        "type=bind,source=${localEnv:HOME}/.local/state/nvim,target=/home/bio/.local/state/nvim",
-        "type=bind,source=${localEnv:HOME}/.cache/wal,target=/home/bio/.cache/wal",
-    ],
-    "initializeCommand": "source ./.devcontainer/setup.sh"
-
 }
 
