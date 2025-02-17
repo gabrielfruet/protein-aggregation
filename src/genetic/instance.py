@@ -69,10 +69,10 @@ class EnergyMaximizerGA:
         if self._generations() == 0:
             logger.info("Generating a population from scratch")
             return self._generate_initial_population(population_size=self.population_size)
-        
+
         logger.info("Using the last computed population")
         return self._get_last_population()
-            
+
     def _get_generation_fname(self, generation: int) -> str:
         filename = f"generation_{generation}.json"
         return filename

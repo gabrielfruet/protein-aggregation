@@ -23,3 +23,6 @@ logs/
 *.snm
 *.nav
 *.vrb
+*.fls
+*.fdb_latexmk
+*.synctex.gz
