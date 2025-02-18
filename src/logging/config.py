@@ -6,9 +6,17 @@ from typing import Union
 
 class ExcludePyrosettaFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> Union[bool,logging.LogRecord]:
-        return 'pyrosetta' not in record.name 
+        return 'pyrosetta' not in record.name
 
 LOG_DIR = Path('./log')
+
+if not LOG_DIR.exists():
+    res = input("Do you wish to create a log dir in ./log?")
+    if res.upper() in ['Y', 'YES', 'SIM', 'S']:
+        LOG_DIR.mkdir()
+    else:
+        print('Not creating dir')
+        exit(1)
 
 # Logging configuration using dictConfig
 LOGGING_CONFIG = {
