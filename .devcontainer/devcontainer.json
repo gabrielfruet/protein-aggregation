@@ -1,7 +1,9 @@
 {
     "name": "Bioinformatics Development Container",
-    "image": "bioinformatics:latest",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
     "containerUser": "bio",
-    "runArgs": ["-w","/workspaces/bioinformatics"],
+    "runArgs": ["-w","/workspaces/bioinformatics"]
 }
 
