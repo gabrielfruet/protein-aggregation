@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class EnergyMaximizerGA:
     filename="energy_maximizer_instance"
     def __init__(self, 
-                 directory='./genetic/instance1', 
+                 directory='./genetic_instances/instance1', 
                  initial = "GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA",
                  num_generations=2,
                  num_parents_mating=10,
