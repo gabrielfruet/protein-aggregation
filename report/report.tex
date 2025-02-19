@@ -1,6 +1,5 @@
 \documentclass[12pt]{extarticle}
 
-\usepackage{sectsty}
 \usepackage{graphicx}
 \usepackage[portuges]{babel}
 
@@ -48,10 +47,27 @@ avanços na terapia do diabetes e na biotecnologia farmacêutica.
 
 \subsection{Bibliotecas e Tecnologias}
 
-Os experimentos foram realizados em computador com uma NVIDIA Geforce RTX 3060
-com 12GB de VRAM e um processador Ryzen 5 5600, para aceleração
-das predições estruturais via ESMFold, foi utilizado CUDA. O pipeline foi implementado em Python,
-integrando as bibliotecas PyGAD, PyTorch, BioPython, OpenMM e outras dependências.
+Os experimentos foram realizados em computador através de um container Docker
+com uma NVIDIA Geforce RTX 3060 com 12GB de VRAM e um processador Ryzen 5 5600,
+para aceleração das predições estruturais via ESMFold, foi utilizado CUDA. O
+pipeline foi implementado em Python, integrando as bibliotecas PyGAD, PyTorch,
+BioPython, OpenMM e outras dependências.
+
+\subsection{Algoritmo Genético}
+
+A otimização de proteínas é um problema complexo, frequentemente caracterizado
+por um grande número de variáveis e funções não deriváveis. Métodos
+tradicionais de otimização, como gradientes ou busca exaustiva, podem ser
+inviáveis devido ao elevado custo computacional. Nesse contexto, algoritmos
+genéticos (AGs) têm se mostrado eficazes na busca por soluções ótimas em
+espaços de alta dimensionalidade.
+
+Neste estudo, utilizamos um AG para projetar variantes de insulina com maior
+estabilidade térmica, preservando sua funcionalidade. O algoritmo calcula a
+estrutura conformacional da proteína e avalia mutações pontuais na sequência da
+proteína e seleciona aquelas que maximizam a estabilidade estrutural, conforme
+critérios de homologia e termoestabilidade que iremos discutir nas seções a
+seguir.
 
 \subsection{População Inicial}
 
@@ -61,6 +77,26 @@ a uma variante da insulina onde apenas um único aminoácido é alterado. As
 sequências geradas são representadas em formato FASTA para facilitar a
 manipulação computacional.
 
+\subsection{Seleção} 
+
+Adotamos a estratégia \textit{Steady-State Selection}, na qual, a cada geração,
+um pequeno número de indivíduos menos aptos é substituído por novos indivíduos
+gerados por operadores genéticos. Essa abordagem mantém a diversidade enquanto
+
+\subsubsection{Operadores Genéticos}
+
+Utilizamos mutação aleatória (\textit{random mutation}), em que um único
+aminoácido da sequência é alterado de forma independente. A probabilidade
+de mutação foi definida como \(1/51\), correspondendo ao número total de
+resíduos da insulina. 
+
+Além disso, utilizamos \textit{uniform crossover}, no qual
+cada posição da sequência tem uma chance independente de ser herdada de um
+dos pais. A probabilidade de crossover foi fixada em 0.2, reduzindo a
+possibilidade de alterações estruturais drásticas.
+
+
+\label{sec:estrutura_conform}
 \subsection{Cálculo da Estrutura Conformacional}
 
 Ao trabalharmos com proteínas, por vezes se faz necessário ter o conhecimento da sua
@@ -81,6 +117,7 @@ necessitando de um hardware menos potente e a predição sem utilizar MSA. Isso
 faz com que o ESMFold consiga ser executado na ordem de poucos segundos em GPUs
 de entrada.
 
+\label{sec:termoestabilidade}
 \subsection{Cálculo da Termoestabilidade}
 
 A termoestabilidade de proteínas pode ser avaliada por métodos como a energia
@@ -105,5 +142,41 @@ contatos atômicos. Três réplicas independentes foram simuladas para cada
 sistema, com os valores de QQ reportados como média ± desvio padrão. As
 simulações usaram o campo de forças AMBER14 \cite{Maier2015} e o modelo de água
 TIP3P \cite{Jorgensen1983}.
+
+\subsection{Função de Aptidão}
+
+No contexto de algoritmos genéticos, a função de aptidão, também conhecida como
+função objetivo, é a função que define o quão boa é uma solução. Buscamos
+encontrar a solução que maximize a aptidão.
+
+Para isso, utilizamos uma função de custo que combina homologia estrutural e
+termoestabilidade. A justificativa para a homologia é que queremos proteínas
+mutantes que não sejam tão estruturalmente diferentes da original, na tentativa
+de manter a funcionalidade e afinidades da insulina.
+
+\begin{equation}
+    f_h(h) = - V - exp\left(\ln{V}\frac{1-h}{1-T} - D\right) + exp(\ln{V} - D)\label{equation:homologia}
+\end{equation}
+
+A aptidão da homologia, é definida por $f_h$ na equação
+\ref{equation:homologia}. Sendo $T$ o valor de \textit{threshold}, $V$ o valor
+que a função deverá assumir quando $T=h$ e $D$ a velocidade em que a função
+decresce. A intuição por trás dessa função é definirmos um \textit{threshold}
+em que queremos trabalhar, (e.g $80\%$) e definimos um valor $V$  que deverá
+ser suficiente pra invalidar qualquer solução que tenha homologia menor que
+80\% (e.g $V =$ valor da maior termoestabilidade). A nossa função é
+monotonicamente decrescente entre 0 e 1, ou seja, a solução que tera melhor
+aptidão de homologia é a que tiver a maior homologia.
+
+Além disso, para compormos nossa função de aptidão que será utilizada no
+algoritmo genético, adicionamos a componente de termoestabilidade, abordada na
+seção \ref{sec:termoestabilidade}, que chamaremos de $f_t$.
+
+\begin{equation}
+    fitness(S) = f_t(S) + f_h(homologia)
+\end{equation}
+
+Sendo S a sequência que queremos calcular.
+
 
 \end{document}
