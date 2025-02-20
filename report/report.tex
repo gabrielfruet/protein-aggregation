@@ -83,7 +83,7 @@ Adotamos a estratégia \textit{Steady-State Selection}, na qual, a cada geraçã
 um pequeno número de indivíduos menos aptos é substituído por novos indivíduos
 gerados por operadores genéticos. Essa abordagem mantém a diversidade enquanto
 
-\subsubsection{Operadores Genéticos}
+\subsection{Operadores Genéticos}
 
 Utilizamos mutação aleatória (\textit{random mutation}), em que um único
 aminoácido da sequência é alterado de forma independente. A probabilidade
@@ -158,6 +158,12 @@ de manter a funcionalidade e afinidades da insulina.
     f_h(h) = - V - exp\left(\ln{V}\frac{1-h}{1-T} - D\right) + exp(\ln{V} - D)\label{equation:homologia}
 \end{equation}
 
+\begin{figure}
+    \begin{center}
+    \includegraphics[width=0.5\linewidth]{../figures/homology_fitness.png}
+    \end{center}
+\end{figure}
+
 A aptidão da homologia, é definida por $f_h$ na equação
 \ref{equation:homologia}. Sendo $T$ o valor de \textit{threshold}, $V$ o valor
 que a função deverá assumir quando $T=h$ e $D$ a velocidade em que a função
@@ -165,8 +171,8 @@ decresce. A intuição por trás dessa função é definirmos um \textit{thresho
 em que queremos trabalhar, (e.g $80\%$) e definimos um valor $V$  que deverá
 ser suficiente pra invalidar qualquer solução que tenha homologia menor que
 80\% (e.g $V =$ valor da maior termoestabilidade). A nossa função é
-monotonicamente decrescente entre 0 e 1, ou seja, a solução que tera melhor
-aptidão de homologia é a que tiver a maior homologia.
+monotonicamente crescente entre 0 e 1, mas sempre negativa. Ou seja, a solução
+que tera melhor aptidão de homologia é a que tiver a maior homologia.
 
 Além disso, para compormos nossa função de aptidão que será utilizada no
 algoritmo genético, adicionamos a componente de termoestabilidade, abordada na
@@ -176,7 +182,7 @@ seção \ref{sec:termoestabilidade}, que chamaremos de $f_t$.
     fitness(S) = f_t(S) + f_h(homologia)
 \end{equation}
 
-Sendo S a sequência que queremos calcular.
+Sendo S a sequência que queremos calcular a aptidão.
 
 
 \end{document}
