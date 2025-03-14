@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 from Bio.PDB import PDBParser, PPBuilder
+import re
+from io import StringIO
 import asyncio
 import logging
 
@@ -31,6 +33,7 @@ class ProteinIndex:
         with open(self.indices_file, "r") as f:
             self.indices = json.load(f)
 
+
     def _infer_sequence_from_pdb_content(self, pdb_content: str) -> str:
         """Infer the amino acid sequence from PDB content using BioPython.
         Args:
@@ -39,25 +42,37 @@ class ProteinIndex:
             str: The inferred amino acid sequence.
         """
         parser = PDBParser(QUIET=True)
-        from io import StringIO
         structure = parser.get_structure("protein", StringIO(pdb_content))
         ppb = PPBuilder()
         sequences = [str(pp.get_sequence()) for pp in ppb.build_peptides(structure)]
         return "".join(sequences)
 
+
     def _generate_pdb_filename(self) -> str:
-        """Generate a unique PDB filename incrementally.
+        """Generate a unique PDB filename based on the highest existing number using regex.
+
         Returns:
             str: Generated filename.
         """
-        existing_files = {file.stem for file in self.directory.glob("*.pdb")}
-        counter = len(existing_files)
-        return f"protein_{counter}"
+        pattern = re.compile(r'^protein_(\d+)$')
+        max_number = 0
+
+        for file in self.directory.glob("protein_*.pdb"):
+            match = pattern.match(file.stem)
+            if match:
+                current_num = int(match.group(1))
+                if current_num > max_number:
+                    max_number = current_num
+
+        next_number = max_number + 1
+        return f"protein_{next_number}.pdb"
+
 
     def _save_indices(self):
         """Save the indices to the indices.json file."""
         with open(self.indices_file, "w") as f:
             json.dump(self.indices, f, indent=4)
+
 
     def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
         """Save a PDB content or multiple PDB contents to the index.
@@ -93,6 +108,7 @@ class ProteinIndex:
         self._save_indices()
         timer_logger.end()
 
+
     def get_metadata(self, sequence: str) -> Dict[str, Union[str, Dict]]:
         """Retrieve metadata for a given sequence.
         Args:
@@ -102,6 +118,7 @@ class ProteinIndex:
         """
         return self.indices.get(sequence, None)
 
+
     def has_pdb(self, sequence: str) -> bool:
         """Check if sequence has pdb already computed
         Args:
@@ -110,6 +127,7 @@ class ProteinIndex:
             bool: Whether pdb was already computed.
         """
         return sequence in self.indices
+
 
     def get_pdb(self, sequence: str) -> str:
         """Retrieve the PDB content as a string for a given sequence.
