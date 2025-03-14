@@ -17,10 +17,10 @@ def pdb_score(pdb_string: str) -> float:
     rosetta_init()
 
     pose = Pose()
-    pose_from_pdbstring(pose, pdb_string)  
+    pose_from_pdbstring(pose, pdb_string)
 
     if not scorefxn:
-        scorefxn = get_fa_scorefxn()  
+        scorefxn = get_fa_scorefxn()
 
     total_score = scorefxn(pose)
     return total_score
@@ -31,7 +31,7 @@ timer_logger = TimerLogger(logger)
 
 class SequenceScorePredictor:
     esmfold_model = None
-    def __init__(self, folder=None, scorer=pdb_score, protein_index=ProteinIndex()) -> None:
+    def __init__(self, folder=None, scorer=pdb_score, protein_index=None) -> None:
         if folder is None:
             global esmfold_model
             esmfold_model = esm.pretrained.esmfold_v1()
@@ -40,7 +40,7 @@ class SequenceScorePredictor:
 
         self.folder = folder
         self.scorer = scorer
-        self.protein_index = protein_index
+        self.protein_index = protein_index if protein_index is not None else ProteinIndex()
 
     def __call__(self, sequences: list[str]) -> list[float]:
         logger.info(f"STARTING: evaluation of {len(sequences)} sequence scores")
