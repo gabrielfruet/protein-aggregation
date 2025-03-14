@@ -23,7 +23,7 @@ class ProteinIndex:
         if not self.directory.exists():
             logger.warning(f"Directory {self.directory} does not exist.")
             os.makedirs(self.directory)
-        
+
         if not self.indices_file.exists():
             with open(self.indices_file, "w") as f:
                 json.dump({}, f, indent=4)
@@ -92,15 +92,6 @@ class ProteinIndex:
 
         self._save_indices()
         timer_logger.end()
-
-    async def async_save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
-        """Async wrapper for saving PDB files.
-        Args:
-            pdb_files (Union[str, List[str]]): PDB content as a string or list of strings.
-            metadata (Optional[Dict]): Metadata to associate with the sequence.
-        """
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.save, pdb_files, metadata)
 
     def get_metadata(self, sequence: str) -> Dict[str, Union[str, Dict]]:
         """Retrieve metadata for a given sequence.
