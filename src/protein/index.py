@@ -54,17 +54,7 @@ class ProteinIndex:
         Returns:
             str: Generated filename.
         """
-        pattern = re.compile(r'^protein_(\d+)$')
-        max_number = 0
-
-        for file in self.directory.glob("protein_*.pdb"):
-            match = pattern.match(file.stem)
-            if match:
-                current_num = int(match.group(1))
-                if current_num > max_number:
-                    max_number = current_num
-
-        next_number = max_number + 1
+        next_number = len(self.indices.keys()) + 1
         return f"protein_{next_number}.pdb"
 
 
