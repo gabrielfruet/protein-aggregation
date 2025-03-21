@@ -31,7 +31,7 @@ class ProteinIndex:
                 json.dump({}, f, indent=4)
 
         with open(self.indices_file, "r") as f:
-            self.indices = json.load(f)
+            self.indices: dict[str, dict] = json.load(f)
 
 
     def _infer_sequence_from_pdb_content(self, pdb_content: str) -> str:
@@ -125,6 +125,9 @@ class ProteinIndex:
             sequence (str): Amino acid sequence.
         Returns:
             str: PDB content as a string.
+        Raises:
+            ValueError: If the sequence is not found in the index.
+            FileNotFoundError: If the PDB file does not exist.
         """
         entry = self.indices.get(sequence)
         if not entry:
@@ -132,6 +135,10 @@ class ProteinIndex:
 
         pdb_path = self.directory / entry["path"]
         if not pdb_path.exists():
+
+            self.indices.pop(sequence)
+            self._save_indices()
+
             raise FileNotFoundError(f"PDB file {pdb_path} does not exist.")
 
         with open(pdb_path, "r") as pdb_file:
