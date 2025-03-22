@@ -8,6 +8,8 @@ from io import StringIO
 import asyncio
 import logging
 
+from PIL.Image import tempfile
+
 from src.logging.timer import TimerLogger
 
 logger = logging.getLogger(__name__)
@@ -41,12 +43,15 @@ class ProteinIndex:
         Returns:
             str: The inferred amino acid sequence.
         """
-        parser = PDBParser(QUIET=True)
-        structure = parser.get_structure("protein", StringIO(pdb_content))
-        ppb = PPBuilder()
-        sequences = [str(pp.get_sequence()) for pp in ppb.build_peptides(structure)]
-        return "".join(sequences)
+        try:
+            parser = PDBParser(QUIET=True)
+            structure = parser.get_structure("protein", StringIO(pdb_content))
+            ppb = PPBuilder()
+            sequences = [str(pp.get_sequence()) for pp in ppb.build_peptides(structure)]
+            return "".join(sequences)
 
+        except Exception as e:
+            raise ValueError(f"Error parsing PDB content: {str(e)}") from e
 
     def _generate_pdb_filename(self) -> str:
         """Generate a unique PDB filename based on the highest existing number using regex.
@@ -60,9 +65,10 @@ class ProteinIndex:
 
     def _save_indices(self):
         """Save the indices to the indices.json file."""
-        with open(self.indices_file, "w") as f:
-            json.dump(self.indices, f, indent=4)
-
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            json.dump(self.indices, temp_file, indent=4)
+            temp_file.close()
+            os.replace(temp_file.name, self.indices_file)
 
     def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
         """Save a PDB content or multiple PDB contents to the index.
