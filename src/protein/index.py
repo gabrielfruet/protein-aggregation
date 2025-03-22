@@ -118,6 +118,20 @@ class ProteinIndex:
         """
         return sequence in self.indices
 
+    def set_metadata(self, sequence: str, metadata: Dict[str, Any]):
+        """Set or update metadata for a given sequence.
+        Args:
+            sequence (str): Amino acid sequence.
+            metadata (Dict[str, Any]): Metadata to associate with the sequence.
+        Raises:
+            ValueError: If the sequence is not found in the index.
+        """
+        if sequence not in self.indices:
+            raise ValueError(f"Sequence {sequence} not found in the index.")
+
+        self.indices[sequence]["metadata"].update(metadata)
+
+        self._save_indices()
 
     def get_pdb(self, sequence: str) -> str:
         """Retrieve the PDB content as a string for a given sequence.
