@@ -8,8 +8,6 @@ from io import StringIO
 import asyncio
 import logging
 
-from PIL.Image import tempfile
-
 from src.logging.timer import TimerLogger
 
 logger = logging.getLogger(__name__)
@@ -65,10 +63,9 @@ class ProteinIndex:
 
     def _save_indices(self):
         """Save the indices to the indices.json file."""
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
-            json.dump(self.indices, temp_file, indent=4)
-            temp_file.close()
-            os.replace(temp_file.name, self.indices_file)
+        with open(self.indices_file, "w") as f:
+            json.dump(self.indices, f, indent=4)
+
 
     def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
         """Save a PDB content or multiple PDB contents to the index.
