@@ -1,9 +1,10 @@
 import mdtraj as md
 import tempfile
+import numpy as np
 from .thermostability_function import ThermostabilityFunction
 from .tmp_pdb import receive_pdb_content_instead_of_path
 
-@ThermostabilityFunction.register('coarse_grained')
+@ThermostabilityFunction.register('coarse_grained_v1')
 @receive_pdb_content_instead_of_path
 def calculate_thermostability_score(pdb_path, weights=None):
     """
@@ -16,7 +17,6 @@ def calculate_thermostability_score(pdb_path, weights=None):
     Returns:
         float: Composite stability score (higher = more stable)
     """
-    # Default weights (adjust based on experimental validation)
     default_weights = {
         'hydrophobic_sasa': -0.4,  # Lower exposed hydrophobics is better
         'salt_bridges': 1.2,       # More salt bridges is better
@@ -24,8 +24,6 @@ def calculate_thermostability_score(pdb_path, weights=None):
         'contact_order': -0.3      # Lower contact order is better
     }
     weights = weights or default_weights
-
-    # Load structure and remove waters/ions
 
     traj = md.load(pdb_path)
     traj = traj.atom_slice(traj.topology.select("protein"))

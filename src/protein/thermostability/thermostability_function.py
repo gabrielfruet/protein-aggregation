@@ -6,6 +6,10 @@ class ThermostabilityFunction:
     def __init__(self, function_name: str):
         self.function_name = function_name
 
+    @property
+    def name(self):
+        return self.function_name
+
     def __call__(self, protein):
         return ThermostabilityFunction.registered_functions[self.function_name](protein)
 
