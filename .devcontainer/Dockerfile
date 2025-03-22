@@ -1,6 +1,4 @@
 FROM bioinformatics:latest
 
 USER root
-RUN cd / ; uv sync --python-preference only-system --only-dev 
-
-USER bio
+RUN cd / ; pip install -r dev-requirements.txt
