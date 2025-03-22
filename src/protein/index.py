@@ -1,7 +1,7 @@
 import os
 import json
 from pathlib import Path
-from typing import Union, List, Dict, Optional
+from typing import Any, Union, List, Dict, Optional
 from Bio.PDB import PDBParser, PPBuilder
 import re
 from io import StringIO
@@ -31,7 +31,7 @@ class ProteinIndex:
                 json.dump({}, f, indent=4)
 
         with open(self.indices_file, "r") as f:
-            self.indices: dict[str, dict] = json.load(f)
+            self.indices: Dict[str, Any] = json.load(f)
 
 
     def _infer_sequence_from_pdb_content(self, pdb_content: str) -> str:
@@ -99,14 +99,14 @@ class ProteinIndex:
         timer_logger.end()
 
 
-    def get_metadata(self, sequence: str) -> Dict[str, Union[str, Dict]]:
+    def get_metadata(self, sequence: str) -> Optional[Dict[str, Any]]:
         """Retrieve metadata for a given sequence.
         Args:
             sequence (str): Amino acid sequence.
         Returns:
-            Dict[str, Union[str, Dict]]: Metadata associated with the sequence.
+            Metadata associated with the sequence.
         """
-        return self.indices.get(sequence, None)
+        return self.indices.get(sequence)
 
 
     def has_pdb(self, sequence: str) -> bool:
