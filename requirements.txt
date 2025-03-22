@@ -1,5 +1,9 @@
 biotite==0.40.0
+mdanalysis>=2.5.0
+mdtraj>=1.10.2
+numpy==1.21.2
+openmm>=8.1.1
 pygad==3.4.0
 pyrosetta-installer==0.1.2
-numpy==1.21.2
+rich>=13.9.4
 scienceplots==2.1.1

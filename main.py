@@ -7,7 +7,7 @@ if __name__ == '__main__':
     from src.genetic.instance import EnergyMaximizerGA
 
     emga = EnergyMaximizerGA(
-        population_size=64, 
+        population_size=64,
         num_parents_mating=32,
         crossover_type='uniform',
         mutation_type='random',
