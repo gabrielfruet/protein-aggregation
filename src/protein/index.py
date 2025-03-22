@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 timer_logger = TimerLogger(logger, level=logging.INFO)
 
 class ProteinIndex:
-    def __init__(self, directory: str = './protein_index'):
+    def __init__(self, directory: str = './protein_index2'):
         """Initialize the ProteinIndex class.
         Args:
             directory (str): Path to the protein index directory.
@@ -118,7 +118,7 @@ class ProteinIndex:
         """
         return sequence in self.indices
 
-    def set_metadata(self, sequence: str, metadata: Dict[str, Any]):
+    def update_metadata(self, sequence: str, metadata: Dict[str, Any]):
         """Set or update metadata for a given sequence.
         Args:
             sequence (str): Amino acid sequence.
