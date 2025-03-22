@@ -1,0 +1,5 @@
+basedpyright>=1.28.3
+ipdb>=0.13.13
+ipython>=8.18.1
+ruff>=0.11.2
+
