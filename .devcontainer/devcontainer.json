@@ -4,6 +4,6 @@
         "dockerfile": "Dockerfile"
     },
     "containerUser": "bio",
-    "runArgs": ["-w","/workspaces/bioinformatics"]
+    "runArgs": ["-w","/workspaces/bioinformatics", "--gpus", "all", "--name" ,"bioinformatics-development"]
 }
 

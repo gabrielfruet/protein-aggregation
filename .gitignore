@@ -9,6 +9,7 @@ build/
 repos/
 *.log
 logs/
+.python-version
 
 
 *.aux

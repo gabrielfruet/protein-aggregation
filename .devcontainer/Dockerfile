@@ -1,6 +1,6 @@
 FROM bioinformatics:latest
 
-RUN pip install \
-    basedpyright \
-    ruff \
-    ipython
+USER root
+RUN cd / ; uv sync --python-preference only-system --only-dev 
+
+USER bio
