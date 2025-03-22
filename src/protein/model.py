@@ -2,87 +2,102 @@ import torch
 import esm
 import logging
 from multiprocessing import Pool
+from typing import List, Optional, Dict, Any
 
 from src.protein.index import ProteinIndex
 from src.logging.timer import TimerLogger
 from src.protein.thermostability import ThermostabilityFunction
 
-scorefxn = None
-
-esmfold_model = None
 logger = logging.getLogger(__name__)
-timer_logger = TimerLogger(logger)
 
 class SequenceScorePredictor:
-    esmfold_model = None
-    
-    def __init__(self, folder=None, thermostability_function_name='coarse_grained_v1', protein_index=None) -> None:
-        if folder is None:
-            global esmfold_model
-            esmfold_model = esm.pretrained.esmfold_v1()
-            esmfold_model.cuda()
-            folder = esmfold_model
-
-        self.folder = folder
+    def __init__(
+        self,
+        folder: Optional[Any] = None,
+        thermostability_function_name: str = 'coarse_grained_v1',
+        protein_index: Optional[ProteinIndex] = None,
+        num_processes: int = 4
+    ) -> None:
+        self.model = folder if folder is not None else self._load_esmfold_model()
         self.scorer = ThermostabilityFunction(thermostability_function_name)
         self.protein_index = protein_index if protein_index is not None else ProteinIndex()
-        self.function_name = thermostability_function_name
+        self.num_processes = num_processes
 
-    def __call__(self, sequences: list[str]) -> list[float]:
+    def _load_esmfold_model(self) -> Any:
+        return esm.pretrained.esmfold_v1().cuda()
+
+    def __call__(self, sequences: List[str]) -> List[float]:
         logger.info(f"STARTING: evaluation of {len(sequences)} sequence scores")
-
-        result = [None] * len(sequences)
+        result = []
         non_cached_sequences = []
-        indices_to_compute = []
 
-        for i, seq in enumerate(sequences):
-            metadata = self.protein_index.get_metadata(seq)
-            if metadata and "thermostability" in metadata and self.scorer.name in metadata["thermostability"]:
-                result[i] = metadata["thermostability"][self.scorer.name]
+        for seq in sequences:
+            if self._is_cached(seq):
+                result.append(self._get_cached_score(seq))
             else:
                 non_cached_sequences.append(seq)
-                indices_to_compute.append(i)
+                result.append(None)
 
-        logger.debug(f"CACHED: {len(result) - len(non_cached_sequences)} thermostability scores were cached")
+        if not non_cached_sequences:
+            logger.info("All scores were cached")
+            return result
+
+        logger.debug(f"CACHED: {len(sequences) - len(non_cached_sequences)} scores were cached")
+        timer_logger = TimerLogger(logger)
         timer_logger.start(f'evaluation of {len(non_cached_sequences)} SEQUENCE scores')
 
+        pdbs = self._get_or_infer_pdbs(non_cached_sequences)
+        scores = self._compute_scores(pdbs, non_cached_sequences)
+        self._update_results(result, non_cached_sequences, scores)
+
+        timer_logger.end()
+        return result
+
+    def _is_cached(self, sequence: str) -> bool:
+        metadata = self.protein_index.get_metadata(sequence)
+        return bool(metadata and "thermostability" in metadata and self.scorer.name in metadata["thermostability"])
+
+    def _get_cached_score(self, sequence: str) -> Optional[float]:
+        metadata = self.protein_index.get_metadata(sequence)
+
+        if not metadata:
+            return None
+
+        return metadata["thermostability"][self.scorer.name]
+
+    def _get_or_infer_pdbs(self, sequences: List[str]) -> List[str]:
         known_pdbs = []
         unknown_sequences = []
-        for seq in non_cached_sequences:
+
+        for seq in sequences:
             if self.protein_index.has_pdb(seq):
                 known_pdbs.append(self.protein_index.get_pdb(seq))
             else:
                 unknown_sequences.append(seq)
 
-        logger.debug(f"CACHED: {len(known_pdbs)} PDBs were cached for non_cached_sequences")
-
-        new_pdbs = []
         if unknown_sequences:
             with torch.no_grad():
-                new_pdbs = self.folder.infer_pdbs(unknown_sequences)
-            self.protein_index.save(new_pdbs)
+                inferred = self.model.infer_pdbs(unknown_sequences)
+            self.protein_index.save(inferred)
+            known_pdbs.extend(inferred)
 
-        pdbs_for_scoring = known_pdbs + new_pdbs
+        return known_pdbs
 
-        if pdbs_for_scoring:
-            with Pool(processes=4) as pool:
-                computed_scores = pool.map(self.scorer, pdbs_for_scoring)
-        else:
-            computed_scores = []
+    def _compute_scores(self, pdbs: List[str], sequences: List[str]) -> List[float]:
+        if not pdbs:
+            return []
 
-        for idx, score in zip(indices_to_compute, computed_scores):
-            result[idx] = score
+        with Pool(self.num_processes) as pool:
+            scores = pool.map(self.scorer, pdbs)
 
-        for seq, score in zip(non_cached_sequences, computed_scores):
+        self._update_cache(sequences, scores)
 
-            metadata = {
-                "thermostability": {
-                    self.scorer.name: score
-                }
-            }
+        return scores
 
-            self.protein_index.update_metadata(seq, metadata)
+    def _update_cache(self, sequences: List[str], scores: List[float]) -> None:
+        for seq, score in zip(sequences, scores):
+            self.protein_index.update_metadata(seq, {"thermostability": {self.scorer.name: score}})
 
-        timer_logger.end()
-
-        return result
+    def _update_results(self, result: List[Optional[float]], sequences: List[str], scores: List[float]) -> None:
+        for i, (seq, score) in enumerate(zip(sequences, scores)):
+            result[sequences.index(seq)] = score
