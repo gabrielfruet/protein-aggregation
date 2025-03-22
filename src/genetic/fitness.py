@@ -18,7 +18,6 @@ def two_step_fitness(ga_instance, population: list[list[int]], idxs) -> list[flo
     """
     ssp = SequenceScorePredictor()
 
-    print(f'{isinstance(population, Iterable)=} {isinstance(population[0], Iterable)=}')
     if not isinstance(population, Iterable) or not isinstance(population[0], Iterable):
         raise RuntimeError("batch_size should be greater than 1")
 
