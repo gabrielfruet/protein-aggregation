@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 import tempfile
-from typing import Any, Union, List, Dict, Optional
+from typing import IO, Any, Callable, Union, List, Dict, Optional
 from Bio.PDB import PDBParser, PPBuilder
 import uuid
 import re
@@ -70,11 +70,56 @@ class ProteinIndex:
 
         return destination
 
+    def _write_file_safely(
+        self,
+        destination: Path,
+        writer_func: Callable[[IO], Any],
+    ):
+        """Write content to a file safely using a temporary file pattern.
+
+        Args:
+            content: The content to write (can be string, dict, or list)
+            directory: The target directory
+            filename: The target filename
+            writer_func: A function that takes a file object and writes the content
+
+        Returns:
+            The path of the written file
+
+        Raises:
+            RuntimeError: If writing fails
+        """
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", dir=self.directory, delete=False) as tmp:
+                writer_func(tmp)
+                Path(tmp.name).rename(destination)
+
+                return destination
+        except IOError as e:
+            logger.error(f"Failed to write file {destination}: {e}")
+            raise RuntimeError(f"Failed to write file {destination}") from e
+
 
     def _save_indices(self):
         """Save the indices to the indices.json file."""
-        with open(self.indices_file, "w") as f:
-            json.dump(self.indices, f, indent=4)
+        self._write_file_safely(self.indices_file, lambda f: json.dump(self.indices, f, indent=4))
+
+    def _write_pdb(self, pdb_content: str) -> Path:
+        """
+        Writes the given PDB content to a file and returns the path of the destination file.
+
+        Args:
+            pdb_content (str): The PDB content to be written to the file.
+
+        Returns:
+            Path: The path of the destination file where the PDB content was written.
+        """
+        destination = self._generate_pdb_destination()
+
+        self._write_file_safely(destination, lambda f: f.write(pdb_content))
+
+        return destination
+
 
     def _save_pdb(self, pdb_content, metadata):
         """
@@ -101,17 +146,8 @@ class ProteinIndex:
             logger.debug(f"ALREADY CACHED {sequence=} on index")
             return
 
-        destination = self._generate_pdb_destination()
-
-        try:
-            with tempfile.NamedTemporaryFile(mode="w", dir=self.directory, delete=False) as tmp:
-                tmp.write(pdb_content)
-                Path(tmp.name).rename(destination)
-
-            logger.debug(f"SAVING {sequence=} index")
-        except IOError as e:
-            logger.error(f"Failed to save PDB file: {e}")
-            raise RuntimeError(f"Failed to save PDB file to {destination}") from e
+        logger.debug(f"SAVING {sequence=} index")
+        destination = self._write_pdb(pdb_content)
 
         self.indices[sequence] = {
             "path": str(destination.relative_to(self.directory)),
