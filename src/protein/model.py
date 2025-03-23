@@ -16,7 +16,7 @@ class SequenceScorePredictor:
         folder: Optional[Any] = None,
         thermostability_function_name: str = 'coarse_grained_v1',
         protein_index: Optional[ProteinIndex] = None,
-        num_processes: int = 4
+        num_processes: int = 1
     ) -> None:
         self.model = folder if folder is not None else self._load_esmfold_model()
         self.scorer = ThermostabilityFunction(thermostability_function_name)
