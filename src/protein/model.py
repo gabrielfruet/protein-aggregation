@@ -98,10 +98,15 @@ class SequenceScorePredictor:
         if not pdbs:
             return []
 
+        logger.info(f"SCORING: {len(pdbs)} unknown sequence scores")
+
         with Pool(self.num_processes) as pool:
             scores = pool.map(self.scorer, pdbs)
 
         self._update_cache(sequences, scores)
+
+        logger.info(f"SCORING: finished {len(pdbs)} unknown sequence scores")
+
 
         return scores
 
