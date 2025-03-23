@@ -1,3 +1,5 @@
+from functools import cache
+from esm.esmfold.v1.pretrained import ESMFold
 import torch
 import esm
 import logging
@@ -10,6 +12,13 @@ from src.protein.thermostability import ThermostabilityFunction
 
 logger = logging.getLogger(__name__)
 
+@cache
+def _load_esmfold_model() -> ESMFold:
+    logger.info('Started loading esmfold_v1')
+    model = esm.pretrained.esmfold_v1().cuda()
+    logger.info('Finished loading esmfold_v1')
+    return model
+
 class SequenceScorePredictor:
     def __init__(
         self,
@@ -18,13 +27,10 @@ class SequenceScorePredictor:
         protein_index: Optional[ProteinIndex] = None,
         num_processes: int = 1
     ) -> None:
-        self.model = folder if folder is not None else self._load_esmfold_model()
+        self.model = folder if folder is not None else _load_esmfold_model()
         self.scorer = ThermostabilityFunction(thermostability_function_name)
         self.protein_index = protein_index if protein_index is not None else ProteinIndex()
         self.num_processes = num_processes
-
-    def _load_esmfold_model(self) -> Any:
-        return esm.pretrained.esmfold_v1().cuda()
 
     def __call__(self, sequences: List[str]) -> List[float]:
         logger.info(f"STARTING: evaluation of {len(sequences)} sequence scores")
@@ -75,11 +81,16 @@ class SequenceScorePredictor:
             else:
                 unknown_sequences.append(seq)
 
+        logger.info(f"INFERRING: {len(unknown_sequences)} unknown sequences")
+
         if unknown_sequences:
             with torch.no_grad():
                 inferred = self.model.infer_pdbs(unknown_sequences)
+
             self.protein_index.save(inferred)
             known_pdbs.extend(inferred)
+
+        logger.info(f"INFERRING: finished {len(unknown_sequences)} folded structure prediction")
 
         return known_pdbs
 
