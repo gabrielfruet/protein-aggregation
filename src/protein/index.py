@@ -134,6 +134,8 @@ class ProteinIndex:
         try:
             for pdb_content in pdb_files:
                 self._save_pdb(pdb_content, metadata)
+        except Exception as e:
+            raise RuntimeError("Failed to save PDB files to index") from e
         finally:
             self._save_indices()
             timer_logger.end()
