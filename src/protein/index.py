@@ -31,8 +31,7 @@ class ProteinIndex:
             logger.info(f"Creating directory {self.directory}")
 
         if not self.indices_file.exists():
-            with open(self.indices_file, "w") as f:
-                json.dump({}, f, indent=4)
+            self._write_file_safely(self.indices_file, lambda f: json.dump({}, f, indent=4))
 
         with open(self.indices_file, "r") as f:
             self.indices: Dict[str, Any] = json.load(f)
