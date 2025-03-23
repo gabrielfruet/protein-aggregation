@@ -6,7 +6,7 @@ from typing import Union
 
 class ExcludePyrosettaFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> Union[bool,logging.LogRecord]:
-        return 'pyrosetta' not in record.name
+        return 'src' in record.name
 
 LOG_DIR = Path('./log')
 
@@ -29,7 +29,7 @@ LOGGING_CONFIG = {
     },
     'formatters': {
         'default': {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            'format': '%(levelname)s - %(asctime)s - %(name)s - %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
@@ -51,7 +51,7 @@ LOGGING_CONFIG = {
     },
     'loggers': {
         '': {  # Root logger
-            'level': 'DEBUG',
+            'level': 'INFO',
             'handlers': ['console', 'file'],
         },
     },
