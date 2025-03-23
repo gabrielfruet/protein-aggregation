@@ -1,8 +1,10 @@
 import os
 import json
 from pathlib import Path
+import tempfile
 from typing import Any, Union, List, Dict, Optional
 from Bio.PDB import PDBParser, PPBuilder
+import uuid
 import re
 from io import StringIO
 import asyncio
@@ -25,6 +27,8 @@ class ProteinIndex:
         if not self.directory.exists():
             logger.warning(f"Directory {self.directory} does not exist.")
             os.makedirs(self.directory)
+
+            logger.info(f"Creating directory {self.directory}")
 
         if not self.indices_file.exists():
             with open(self.indices_file, "w") as f:
@@ -51,20 +55,55 @@ class ProteinIndex:
         except Exception as e:
             raise ValueError(f"Error parsing PDB content: {str(e)}") from e
 
-    def _generate_pdb_filename(self) -> str:
-        """Generate a unique PDB filename based on the highest existing number using regex.
+    def _generate_pdb_destination(self) -> Path:
+        """
+        Generate a pdb file name using uuid4
 
         Returns:
             str: Generated filename.
         """
-        next_number = len(self.indices.keys()) + 1
-        return f"protein_{next_number}.pdb"
+        destination: Optional[Path] = None
+
+        while destination is None or destination.exists():
+            new_filename = f"protein_{uuid.uuid4()}.pdb"
+            destination = self.directory / new_filename
+
+        return destination
 
 
     def _save_indices(self):
         """Save the indices to the indices.json file."""
         with open(self.indices_file, "w") as f:
             json.dump(self.indices, f, indent=4)
+
+    def _save_pdb(self, pdb_content, metadata):
+        try:
+            sequence = self._infer_sequence_from_pdb_content(pdb_content)
+        except Exception as e:
+            logger.error(f"Failed to infer sequence from PDB content: {e}")
+            raise ValueError("Could not infer sequence from PDB content") from e
+
+        if sequence in self.indices:
+            logger.debug(f"ALREADY CACHED {sequence=} on index")
+
+        destination = self._generate_pdb_destination()
+
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", dir=self.directory, delete=False) as tmp:
+                tmp.write(pdb_content)
+                Path(tmp.name).rename(destination)
+
+            logger.debug(f"SAVING {sequence=} index")
+        except IOError as e:
+            logger.error(f"Failed to save PDB file: {e}")
+            raise RuntimeError(f"Failed to save PDB file to {destination}") from e
+
+        self.indices[sequence] = {
+            "path": str(destination.relative_to(self.directory)),
+            "metadata": metadata or {}
+        }
+
+        return destination
 
 
     def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
@@ -78,28 +117,12 @@ class ProteinIndex:
 
         timer_logger.start(task=f'SAVING {len(pdb_files)} pdbs to index' )
 
-        for pdb_content in pdb_files:
-            sequence = self._infer_sequence_from_pdb_content(pdb_content)
-
-            if sequence in self.indices:
-                logger.debug(f"ALREADY CACHED {sequence=} on index")
-                continue  # Skip if the sequence already exists
-
-            new_filename = self._generate_pdb_filename()
-            destination = self.directory / f"{new_filename}.pdb"
-
-            with open(destination, "w") as pdb_file:
-                pdb_file.write(pdb_content)
-
-            logger.debug(f"SAVING {sequence=} index")
-
-            self.indices[sequence] = {
-                "path": str(destination.relative_to(self.directory)),
-                "metadata": metadata or {}
-            }
-
-        self._save_indices()
-        timer_logger.end()
+        try:
+            for pdb_content in pdb_files:
+                self._save_pdb(pdb_content, metadata)
+        finally:
+            self._save_indices()
+            timer_logger.end()
 
 
     def get_metadata(self, sequence: str) -> Optional[Dict[str, Any]]:
