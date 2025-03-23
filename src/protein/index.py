@@ -77,6 +77,20 @@ class ProteinIndex:
             json.dump(self.indices, f, indent=4)
 
     def _save_pdb(self, pdb_content, metadata):
+        """
+        Saves a PDB file to a destination and updates the indices with the sequence and file metadata.
+
+        Args:
+            pdb_content (str): The content of the PDB file to be saved.
+            metadata (dict, optional): Additional metadata to be stored with the PDB file. Defaults to an empty dictionary.
+
+        Returns:
+            Path: The path to the saved PDB file.
+
+        Raises:
+            ValueError: If the sequence cannot be inferred from the PDB content.
+            RuntimeError: If the PDB file cannot be saved to the destination.
+        """
         try:
             sequence = self._infer_sequence_from_pdb_content(pdb_content)
         except Exception as e:
@@ -85,6 +99,7 @@ class ProteinIndex:
 
         if sequence in self.indices:
             logger.debug(f"ALREADY CACHED {sequence=} on index")
+            return
 
         destination = self._generate_pdb_destination()
 
@@ -104,7 +119,6 @@ class ProteinIndex:
         }
 
         return destination
-
 
     def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
         """Save a PDB content or multiple PDB contents to the index.
