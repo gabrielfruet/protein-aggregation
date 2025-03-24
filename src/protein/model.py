@@ -1,8 +1,10 @@
 from functools import cache
+
 from esm.esmfold.v1.pretrained import ESMFold
 import torch
 import esm
 import logging
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from multiprocessing import Pool
 from typing import List, Optional, Dict, Any
 
@@ -12,12 +14,17 @@ from src.protein.thermostability import ThermostabilityFunction
 
 logger = logging.getLogger(__name__)
 
-@cache
+esmfold_v1_model = None
+
 def _load_esmfold_model() -> ESMFold:
-    logger.info('Started loading esmfold_v1')
-    model = esm.pretrained.esmfold_v1().cuda()
-    logger.info('Finished loading esmfold_v1')
-    return model
+    global esmfold_v1_model
+    if esmfold_v1_model is None:
+        logger.info('Started loading esmfold_v1')
+        esmfold_v1_model = esm.pretrained.esmfold_v1().cuda()
+
+        logger.info('Finished loading esmfold_v1')
+
+    return esmfold_v1_model
 
 class SequenceScorePredictor:
     def __init__(
@@ -25,7 +32,7 @@ class SequenceScorePredictor:
         folder: Optional[Any] = None,
         thermostability_function_name: str = 'coarse_grained_v1',
         protein_index: Optional[ProteinIndex] = None,
-        num_processes: int = 1
+        num_processes: int = 1,
     ) -> None:
         self.model = folder if folder is not None else _load_esmfold_model()
         self.scorer = ThermostabilityFunction(thermostability_function_name)
@@ -48,15 +55,15 @@ class SequenceScorePredictor:
             logger.info("All scores were cached")
             return result
 
+
         logger.debug(f"CACHED: {len(sequences) - len(non_cached_sequences)} scores were cached")
-        timer_logger = TimerLogger(logger)
-        timer_logger.start(f'evaluation of {len(non_cached_sequences)} SEQUENCE scores')
 
         pdbs = self._get_or_infer_pdbs(non_cached_sequences)
+
         scores = self._compute_scores(pdbs, non_cached_sequences)
+
         self._update_results(result, non_cached_sequences, scores)
 
-        timer_logger.end()
         return result
 
     def _is_cached(self, sequence: str) -> bool:
@@ -84,13 +91,14 @@ class SequenceScorePredictor:
         logger.info(f"INFERRING: {len(unknown_sequences)} unknown sequences")
 
         if unknown_sequences:
-            with torch.no_grad():
-                inferred = self.model.infer_pdbs(unknown_sequences)
+            with TimerLogger(logger)(task=f"INFERRING {len(unknown_sequences)} unknown sequences)"):
+                with torch.no_grad():
+                    inferred = self.model.infer_pdbs(unknown_sequences)
 
             self.protein_index.save(inferred)
             known_pdbs.extend(inferred)
 
-        logger.info(f"INFERRING: finished {len(unknown_sequences)} folded structure prediction")
+            logger.info(f"INFERRING: finished {len(unknown_sequences)} folded structure prediction")
 
         return known_pdbs
 
@@ -100,8 +108,9 @@ class SequenceScorePredictor:
 
         logger.info(f"SCORING: {len(pdbs)} unknown sequence scores")
 
-        with Pool(self.num_processes) as pool:
-            scores = pool.map(self.scorer, pdbs)
+        with TimerLogger(logger)(task=f"SCORING {len(pdbs)} unknown sequence scores"):
+            with Pool(self.num_processes) as pool:
+                scores = pool.map(self.scorer, pdbs)
 
         self._update_cache(sequences, scores)
 
