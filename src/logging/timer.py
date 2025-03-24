@@ -1,6 +1,7 @@
 import logging
 from typing import Literal
 import time
+import contextlib
 
 str_to_resolution = {
     's': 10e-9,
@@ -9,11 +10,12 @@ str_to_resolution = {
 }
 
 class TimerLogger:
-    def __init__(self, 
+    def __init__(self,
                  logger: logging.Logger,
                  level: int = logging.INFO,
-                 msg: str = '{task} took {time}',
+                 msg: str = 'FINISHED {task} took {time}',
                  resolution: Literal['s', 'ms', 'ns'] = 's'):
+
         self.logger = logger
         self.level = level
         self.timers: dict[str, tuple[str,int]] = {}
@@ -29,3 +31,11 @@ class TimerLogger:
         elapsed_time = (time.perf_counter_ns() - start) * self.resolution
         msg = self.format_msg.format(task=task, time=f'{elapsed_time:.2f} {self.resolution_str}')
         self.logger.log(self.level, msg)
+
+    @contextlib.contextmanager
+    def __call__(self, task: str, timer: str ='base'):
+        try:
+            self.start(task, timer)
+            yield
+        finally:
+            self.end()
