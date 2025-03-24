@@ -1,3 +1,4 @@
+from functools import partial
 import os
 import json
 from pathlib import Path
@@ -13,7 +14,7 @@ import logging
 from src.logging.timer import TimerLogger
 
 logger = logging.getLogger(__name__)
-timer_logger = TimerLogger(logger, level=logging.INFO)
+timer_logger = TimerLogger(logger=logger, level=logging.INFO)
 
 class ProteinIndex:
     def __init__(self, directory: str = './protein_index2'):
@@ -164,16 +165,14 @@ class ProteinIndex:
         if isinstance(pdb_files, str):
             pdb_files = [pdb_files]
 
-        timer_logger.start(task=f'SAVING {len(pdb_files)} pdbs to index' )
-
-        try:
-            for pdb_content in pdb_files:
-                self._save_pdb(pdb_content, metadata)
-        except Exception as e:
-            raise RuntimeError("Failed to save PDB files to index") from e
-        finally:
-            self._save_indices()
-            timer_logger.end()
+        with timer_logger(task=f'SAVING {len(pdb_files)} pdbs to index'):
+            try:
+                for pdb_content in pdb_files:
+                    self._save_pdb(pdb_content, metadata)
+            except Exception as e:
+                raise RuntimeError("Failed to save PDB files to index") from e
+            finally:
+                self._save_indices()
 
 
     def get_metadata(self, sequence: str) -> Optional[Dict[str, Any]]:
