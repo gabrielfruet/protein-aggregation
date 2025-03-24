@@ -2,12 +2,13 @@ import pygad
 import rich
 from rich.console import Console
 from rich.spinner import Spinner
-from rich.progress import Progress
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
+from rich.layout import Layout
 import json
 from pathlib import Path
 import numpy as np
 
-from src.genetic.fitness import two_step_fitness
+from src.genetic.fitness import TwoStepFitness
 from src.genetic.mutation import get_aminoacids, aa_to_num, num_to_aa
 
 import logging
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class EnergyMaximizerGA:
     filename="energy_maximizer_instance"
-    def __init__(self, 
+    def __init__(self,
                  directory='./genetic_instances/instance1', 
                  initial = "GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA",
                  num_generations=2,
@@ -28,13 +29,11 @@ class EnergyMaximizerGA:
         self.initial = initial
         self.population_size = population_size
         self.base_color = "bright_cyan"
-        console = Console()
-
-        console.print(f'[{self.base_color}]Creating the {EnergyMaximizerGA.__name__} instance[/{self.base_color}]')
+        self.num_generations = num_generations
+        self.fitness = TwoStepFitness()
+        self.kwargs = kwargs
 
         if not self.dir.exists():
-            console.log(f'[{self.base_color}]Directory for {EnergyMaximizerGA.__name__} was not yet created[/{self.base_color}].')
-            console.log(f'[bright_yellow]Creating directory at {self.dir}[/bright_yellow].')
             logger.info(f"Instance directory for EnergyMaximizerGA was not already created at: {str(self.dir)}")
             self.dir.mkdir(parents=True)
 
@@ -42,7 +41,7 @@ class EnergyMaximizerGA:
             num_generations=num_generations,
             num_parents_mating=num_parents_mating,
             initial_population=self.get_initial_population(),
-            fitness_func=two_step_fitness,
+            fitness_func=self.fitness.__call__,
             fitness_batch_size=batch_size,
             on_generation=self.on_generation,
             gene_space=aa_to_num(get_aminoacids()),
@@ -100,17 +99,13 @@ class EnergyMaximizerGA:
         if fitness is None:
             raise RuntimeError("fitness is None on pygad.GA instance")
 
-        with Progress() as progress:
-            spinner = progress.add_task("[cyan]Saving generation...", spinner="dots")
+        filename = self.dir / self._get_generation_fname(generation)
 
-            sequence_fitness_pairs = {
-                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
-            }
+        sequence_fitness_pairs = {
+            'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
+        }
 
-            filename = self.dir / self._get_generation_fname(generation)
+        with open(filename, "w") as file:
+            json.dump(sequence_fitness_pairs, file, indent=4)
 
-            with open(filename, "w") as file:
-                json.dump(sequence_fitness_pairs, file, indent=4)
-
-            logger.info(f"SAVED generation {generation} to file {filename.absolute()}")
-            progress.update(spinner, completed=True)
+        logger.info(f"SAVED generation {generation} to file {filename.absolute()}")
