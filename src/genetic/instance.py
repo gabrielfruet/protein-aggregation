@@ -1,3 +1,7 @@
+from functools import cache, cached_property, lru_cache
+import operator
+from statistics import mean, stdev
+from typing import Iterable
 import pygad
 import rich
 from rich.console import Console
@@ -31,13 +35,18 @@ class EnergyMaximizerGA:
         self.base_color = "bright_cyan"
         self.num_generations = num_generations
         self.fitness = TwoStepFitness()
+
+        from src.cli.ga import GeneticAlgorithmConsoleManager
+        self.cli = GeneticAlgorithmConsoleManager()
+
+        self.num_generations = num_generations
         self.kwargs = kwargs
 
         if not self.dir.exists():
             logger.info(f"Instance directory for EnergyMaximizerGA was not already created at: {str(self.dir)}")
             self.dir.mkdir(parents=True)
 
-        self.ga_instance = pygad.GA(
+        self.ga_instance: pygad.GA = pygad.GA(
             num_generations=num_generations,
             num_parents_mating=num_parents_mating,
             initial_population=self.get_initial_population(),
@@ -49,7 +58,8 @@ class EnergyMaximizerGA:
         )
 
     def run(self):
-        self.ga_instance.run()
+        with self.cli(self, total=self.num_generations):
+            self.ga_instance.run()
 
     def _generate_initial_population(self,population_size: int):
         population = []
@@ -93,6 +103,7 @@ class EnergyMaximizerGA:
         population = ga_instance.population
         fitness = ga_instance.last_generation_fitness
 
+
         if population is None:
             raise RuntimeError("Population is None on pygad.GA instance")
 
@@ -101,11 +112,62 @@ class EnergyMaximizerGA:
 
         filename = self.dir / self._get_generation_fname(generation)
 
-        sequence_fitness_pairs = {
-            'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
-        }
+        with self.cli.spinner(f"[bright_green] Saving generation to {filename}"):
 
-        with open(filename, "w") as file:
-            json.dump(sequence_fitness_pairs, file, indent=4)
+            sequence_fitness_pairs = {
+                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
+            }
 
-        logger.info(f"SAVED generation {generation} to file {filename.absolute()}")
+            with open(filename, "w") as file:
+                json.dump(sequence_fitness_pairs, file, indent=4)
+
+            logger.info(f"SAVED generation {generation} to file {filename.absolute()}")
+
+        self.cli.update_progress()
+        self.cli.metric_after_generation(self)
+
+class GAMetricCalculator:
+    def __init__(self, emga: EnergyMaximizerGA):
+        self.emga: EnergyMaximizerGA = emga
+
+    def get_generation_population(self, n=-1):
+        no_generations = self.emga._generations()
+
+        if n < 0:
+            n = no_generations + n + 1
+
+        fpath = self.emga.dir / self.emga._get_generation_fname(n-1)
+
+        with open(fpath, "r") as f:
+            generation = json.load(f)
+
+        return generation
+
+    def fitness(self, n=-1) -> Iterable[float]:
+        generation = self.get_generation_population(n)
+        return map(operator.itemgetter("fitness"),generation["population"])
+
+    def best_fitness(self, n=-1):
+        return max(self.fitness(n))
+
+    def worst_fitness(self, n=-1):
+        return min(self.fitness(n))
+
+    def change_in_best_fitness(self):
+        return self.best_fitness(-1) - self.best_fitness(-2)
+
+    def change_in_worst_fitness(self):
+        return self.worst_fitness(-1) - self.worst_fitness(-2)
+
+    def generation(self):
+        return self.emga._generations()
+
+    def mean(self):
+        return mean(self.fitness(-1))
+
+    def std(self):
+        return stdev(self.fitness(-1))
+
+    def population_size(self):
+        return len(self.get_generation_population(-1)["population"])
+
