@@ -1,6 +1,7 @@
 from functools import cache
+from pathlib import Path
 
-from esm.esmfold.v1.pretrained import ESMFold
+from esm.esmfold.v1.esmfold import ESMFold
 import torch
 import esm
 import logging
@@ -11,21 +12,37 @@ from typing import List, Optional, Dict, Any
 from src.protein.index import ProteinIndex
 from src.logging.timer import TimerLogger
 from src.protein.thermostability import ThermostabilityFunction
+from src.cli import GeneticAlgorithmConsoleManager
 
 logger = logging.getLogger(__name__)
 
 esmfold_v1_model = None
 
+CACHE_PATH = Path("~/.cache/esmfold_v1.pth").expanduser()
+
 def _load_esmfold_model() -> ESMFold:
     global esmfold_v1_model
     if esmfold_v1_model is None:
+        cli = GeneticAlgorithmConsoleManager()
         logger.info('Started loading esmfold_v1')
-        esmfold_v1_model = esm.pretrained.esmfold_v1().cuda()
+        model = None
+
+        if CACHE_PATH.exists():
+            with cli.spinner("[bright_green]Loading cached [white]esmfold_v1[/white]"):
+                logger.info("Loading cached esmfold_v1 model")
+                model = torch.load(CACHE_PATH).cuda()
+        else:
+            with cli.spinner("[bright_green]Loading [white]esmfold_v1[/white]"):
+                model = esm.pretrained.esmfold_v1()
+                torch.save(model, CACHE_PATH)  # Save without CUDA to avoid device issues
+
+        with cli.spinner("[bright_green]Moving [white]esmfold_v1[/white] to GPU"):
+            esmfold_v1_model = model.cuda()
 
         logger.info('Finished loading esmfold_v1')
+        cli.log("[bright_green]Successfully loaded esmfold_v1")
 
     return esmfold_v1_model
-
 class SequenceScorePredictor:
     def __init__(
         self,
@@ -38,31 +55,34 @@ class SequenceScorePredictor:
         self.scorer = ThermostabilityFunction(thermostability_function_name)
         self.protein_index = protein_index if protein_index is not None else ProteinIndex()
         self.num_processes = num_processes
+        self.cli = GeneticAlgorithmConsoleManager()
 
     def __call__(self, sequences: List[str]) -> List[float]:
         logger.info(f"STARTING: evaluation of {len(sequences)} sequence scores")
         result = []
         non_cached_sequences = []
 
-        for seq in sequences:
-            if self._is_cached(seq):
-                result.append(self._get_cached_score(seq))
-            else:
-                non_cached_sequences.append(seq)
-                result.append(None)
+        with self.cli.spinner("[bright_yellow]Inferring scores from sequences", name="line"):
+            with self.cli.spinner("[bright_cyan]Checking cached scores"):
+                for seq in sequences:
+                    if self._is_cached(seq):
+                        result.append(self._get_cached_score(seq))
+                    else:
+                        non_cached_sequences.append(seq)
+                        result.append(None)
 
-        if not non_cached_sequences:
-            logger.info("All scores were cached")
-            return result
+            if not non_cached_sequences:
+                logger.info("All scores were cached")
+                return result
 
 
-        logger.debug(f"CACHED: {len(sequences) - len(non_cached_sequences)} scores were cached")
+            logger.debug(f"CACHED: {len(sequences) - len(non_cached_sequences)} scores were cached")
 
-        pdbs = self._get_or_infer_pdbs(non_cached_sequences)
+            pdbs = self._get_or_infer_pdbs(non_cached_sequences)
 
-        scores = self._compute_scores(pdbs, non_cached_sequences)
+            scores = self._compute_scores(pdbs, non_cached_sequences)
 
-        self._update_results(result, non_cached_sequences, scores)
+            self._update_results(result, non_cached_sequences, scores)
 
         return result
 
@@ -91,9 +111,10 @@ class SequenceScorePredictor:
         logger.info(f"INFERRING: {len(unknown_sequences)} unknown sequences")
 
         if unknown_sequences:
-            with TimerLogger(logger)(task=f"INFERRING {len(unknown_sequences)} unknown sequences)"):
-                with torch.no_grad():
-                    inferred = self.model.infer_pdbs(unknown_sequences)
+            with self.cli.spinner(f"[bright_cyan]Inferring {len(unknown_sequences)} folded structures"):
+                with TimerLogger(logger)(task=f"INFERRING {len(unknown_sequences)} unknown sequences)"):
+                    with torch.no_grad():
+                        inferred = self.model.infer_pdbs(unknown_sequences)
 
             self.protein_index.save(inferred)
             known_pdbs.extend(inferred)
@@ -108,9 +129,10 @@ class SequenceScorePredictor:
 
         logger.info(f"SCORING: {len(pdbs)} unknown sequence scores")
 
-        with TimerLogger(logger)(task=f"SCORING {len(pdbs)} unknown sequence scores"):
-            with Pool(self.num_processes) as pool:
-                scores = pool.map(self.scorer, pdbs)
+        with self.cli.spinner(f"[bright_cyan]Scoring {len(pdbs)} sequence scores"):
+            with TimerLogger(logger)(task=f"SCORING {len(pdbs)} unknown sequence scores"):
+                with Pool(self.num_processes) as pool:
+                    scores = pool.map(self.scorer, pdbs)
 
         self._update_cache(sequences, scores)
 
