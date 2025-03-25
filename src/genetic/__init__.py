@@ -1,1 +1,1 @@
-from src.genetic.instance import GAMetricCalculator, EnergyMaximizerGA
+from src.genetic.instance import EnergyMaximizerGA, GAMetricCalculator

@@ -1,10 +1,11 @@
 import mdtraj as md
-import tempfile
 import numpy as np
+
 from .thermostability_function import ThermostabilityFunction
 from .tmp_pdb import receive_pdb_content_instead_of_path
 
-@ThermostabilityFunction.register('coarse_grained_v1')
+
+@ThermostabilityFunction.register("coarse_grained_v1")
 @receive_pdb_content_instead_of_path
 def calculate_thermostability_score(pdb_path, weights=None):
     """
@@ -18,10 +19,10 @@ def calculate_thermostability_score(pdb_path, weights=None):
         float: Composite stability score (higher = more stable)
     """
     default_weights = {
-        'hydrophobic_sasa': -0.4,  # Lower exposed hydrophobics is better
-        'salt_bridges': 1.2,       # More salt bridges is better
-        'packing_density': 0.7,    # Tighter packing is better
-        'contact_order': -0.3      # Lower contact order is better
+        "hydrophobic_sasa": -0.4,  # Lower exposed hydrophobics is better
+        "salt_bridges": 1.2,  # More salt bridges is better
+        "packing_density": 0.7,  # Tighter packing is better
+        "contact_order": -0.3,  # Lower contact order is better
     }
     weights = weights or default_weights
 
@@ -29,9 +30,11 @@ def calculate_thermostability_score(pdb_path, weights=None):
     traj = traj.atom_slice(traj.topology.select("protein"))
 
     # 1. Hydrophobic Solvent Accessible Surface Area
-    hydrophobic_residues = ['ALA', 'VAL', 'ILE', 'LEU', 'MET', 'PHE', 'TRP']
-    sasa = md.shrake_rupley(traj, mode='residue')[0]
-    hydrophobic_mask = [res.name in hydrophobic_residues for res in traj.topology.residues]
+    hydrophobic_residues = ["ALA", "VAL", "ILE", "LEU", "MET", "PHE", "TRP"]
+    sasa = md.shrake_rupley(traj, mode="residue")[0]
+    hydrophobic_mask = [
+        res.name in hydrophobic_residues for res in traj.topology.residues
+    ]
     h_sasa = np.sum(sasa[hydrophobic_mask])
 
     # 2. Salt Bridge Count (acidic-basic residue pairs within 4Å)
@@ -67,8 +70,9 @@ def calculate_thermostability_score(pdb_path, weights=None):
     # 4. Contact Order (normalized by chain length)
     ca_indices = traj.topology.select("name CA")
     n_ca = len(ca_indices)
-    distances = md.compute_distances(traj, [[i,j] for i in ca_indices 
-                                     for j in ca_indices if j > i])
+    distances = md.compute_distances(
+        traj, [[i, j] for i in ca_indices for j in ca_indices if j > i]
+    )
     contacts = [d < 0.6 for d in distances[0]]  # 6Å cutoff
 
     sequence_seps = []
@@ -82,11 +86,13 @@ def calculate_thermostability_score(pdb_path, weights=None):
                 sequence_seps.append(sep)
             contact_idx += 1
 
-    contact_order = np.mean(sequence_seps)/traj.n_residues if sequence_seps else 0
+    contact_order = np.mean(sequence_seps) / traj.n_residues if sequence_seps else 0
     # Calculate composite score
-    score = (weights['hydrophobic_sasa'] * h_sasa +
-        weights['salt_bridges'] * salt_bridges +
-        weights['packing_density'] * packing_density +
-        weights['contact_order'] * contact_order)
+    score = (
+        weights["hydrophobic_sasa"] * h_sasa
+        + weights["salt_bridges"] * salt_bridges
+        + weights["packing_density"] * packing_density
+        + weights["contact_order"] * contact_order
+    )
 
     return score

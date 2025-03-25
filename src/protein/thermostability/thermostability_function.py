@@ -3,6 +3,7 @@ from typing import List
 
 class ThermostabilityFunction:
     registered_functions = {}
+
     def __init__(self, function_name: str):
         self.function_name = function_name
 
@@ -23,4 +24,3 @@ class ThermostabilityFunction:
             return func
 
         return register_with_name
-

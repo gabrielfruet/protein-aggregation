@@ -1,23 +1,22 @@
-from functools import partial
-import os
 import json
-from pathlib import Path
-import tempfile
-from typing import IO, Any, Callable, Union, List, Dict, Optional
-from Bio.PDB import PDBParser, PPBuilder
-import uuid
-import re
-from io import StringIO
-import asyncio
 import logging
+import os
+import tempfile
+import uuid
+from io import StringIO
+from pathlib import Path
+from typing import IO, Any, Callable, Dict, List, Optional, Union
+
+from Bio.PDB import PDBParser, PPBuilder
 
 from src.logging.timer import TimerLogger
 
 logger = logging.getLogger(__name__)
 timer_logger = TimerLogger(logger=logger, level=logging.INFO)
 
+
 class ProteinIndex:
-    def __init__(self, directory: str = './protein_index2'):
+    def __init__(self, directory: str = "./protein_index2"):
         """Initialize the ProteinIndex class.
         Args:
             directory (str): Path to the protein index directory.
@@ -32,11 +31,12 @@ class ProteinIndex:
             logger.info(f"Creating directory {self.directory}")
 
         if not self.indices_file.exists():
-            self._write_file_safely(self.indices_file, lambda f: json.dump({}, f, indent=4))
+            self._write_file_safely(
+                self.indices_file, lambda f: json.dump({}, f, indent=4)
+            )
 
         with open(self.indices_file, "r") as f:
             self.indices: Dict[str, Any] = json.load(f)
-
 
     def _infer_sequence_from_pdb_content(self, pdb_content: str) -> str:
         """Infer the amino acid sequence from PDB content using BioPython.
@@ -90,7 +90,9 @@ class ProteinIndex:
             RuntimeError: If writing fails
         """
         try:
-            with tempfile.NamedTemporaryFile(mode="w", dir=self.directory, delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=self.directory, delete=False
+            ) as tmp:
                 writer_func(tmp)
                 Path(tmp.name).rename(destination)
 
@@ -99,10 +101,11 @@ class ProteinIndex:
             logger.error(f"Failed to write file {destination}: {e}")
             raise RuntimeError(f"Failed to write file {destination}") from e
 
-
     def _save_indices(self):
         """Save the indices to the indices.json file."""
-        self._write_file_safely(self.indices_file, lambda f: json.dump(self.indices, f, indent=4))
+        self._write_file_safely(
+            self.indices_file, lambda f: json.dump(self.indices, f, indent=4)
+        )
 
     def _write_pdb(self, pdb_content: str) -> Path:
         """
@@ -119,7 +122,6 @@ class ProteinIndex:
         self._write_file_safely(destination, lambda f: f.write(pdb_content))
 
         return destination
-
 
     def _save_pdb(self, pdb_content, metadata):
         """
@@ -151,7 +153,7 @@ class ProteinIndex:
 
         self.indices[sequence] = {
             "path": str(destination.relative_to(self.directory)),
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
 
         return destination
@@ -165,7 +167,7 @@ class ProteinIndex:
         if isinstance(pdb_files, str):
             pdb_files = [pdb_files]
 
-        with timer_logger(task=f'SAVING {len(pdb_files)} pdbs to index'):
+        with timer_logger(task=f"SAVING {len(pdb_files)} pdbs to index"):
             try:
                 for pdb_content in pdb_files:
                     self._save_pdb(pdb_content, metadata)
@@ -173,7 +175,6 @@ class ProteinIndex:
                 raise RuntimeError("Failed to save PDB files to index") from e
             finally:
                 self._save_indices()
-
 
     def get_metadata(self, sequence: str) -> Optional[Dict[str, Any]]:
         """Retrieve metadata for a given sequence.
@@ -183,7 +184,6 @@ class ProteinIndex:
             Metadata associated with the sequence.
         """
         return self.indices.get(sequence)
-
 
     def has_pdb(self, sequence: str) -> bool:
         """Check if sequence has pdb already computed
@@ -225,7 +225,6 @@ class ProteinIndex:
 
         pdb_path = self.directory / entry["path"]
         if not pdb_path.exists():
-
             self.indices.pop(sequence)
             self._save_indices()
 
@@ -233,4 +232,3 @@ class ProteinIndex:
 
         with open(pdb_path, "r") as pdb_file:
             return pdb_file.read()
-

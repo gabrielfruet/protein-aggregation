@@ -1,34 +1,32 @@
-from functools import cache, cached_property, lru_cache
+import json
+import logging
 import operator
+from pathlib import Path
 from statistics import mean, stdev
 from typing import Iterable
-import pygad
-import rich
-from rich.console import Console
-from rich.spinner import Spinner
-from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
-from rich.layout import Layout
-import json
-from pathlib import Path
+
 import numpy as np
+import pygad
 
 from src.genetic.fitness import TwoStepFitness
-from src.genetic.mutation import get_aminoacids, aa_to_num, num_to_aa
-
-import logging
+from src.genetic.mutation import aa_to_num, get_aminoacids, num_to_aa
 
 logger = logging.getLogger(__name__)
 
+
 class EnergyMaximizerGA:
-    filename="energy_maximizer_instance"
-    def __init__(self,
-                 directory='./genetic_instances/instance1', 
-                 initial = "GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA",
-                 num_generations=2,
-                 num_parents_mating=10,
-                 batch_size=16,
-                 population_size=20,
-                 **kwargs):
+    filename = "energy_maximizer_instance"
+
+    def __init__(
+        self,
+        directory="./genetic_instances/instance1",
+        initial="GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA",
+        num_generations=2,
+        num_parents_mating=10,
+        batch_size=16,
+        population_size=20,
+        **kwargs,
+    ):
         self.dir: Path = Path(directory)
         self.initial = initial
         self.population_size = population_size
@@ -37,13 +35,16 @@ class EnergyMaximizerGA:
         self.fitness = TwoStepFitness()
 
         from src.cli.ga import GeneticAlgorithmConsoleManager
+
         self.cli = GeneticAlgorithmConsoleManager()
 
         self.num_generations = num_generations
         self.kwargs = kwargs
 
         if not self.dir.exists():
-            logger.info(f"Instance directory for EnergyMaximizerGA was not already created at: {str(self.dir)}")
+            logger.info(
+                f"Instance directory for EnergyMaximizerGA was not already created at: {str(self.dir)}"
+            )
             self.dir.mkdir(parents=True)
 
         self.ga_instance: pygad.GA = pygad.GA(
@@ -54,14 +55,14 @@ class EnergyMaximizerGA:
             fitness_batch_size=batch_size,
             on_generation=self.on_generation,
             gene_space=aa_to_num(get_aminoacids()),
-            **kwargs
+            **kwargs,
         )
 
     def run(self):
         with self.cli(self, total=self.num_generations):
             self.ga_instance.run()
 
-    def _generate_initial_population(self,population_size: int):
+    def _generate_initial_population(self, population_size: int):
         population = []
         for _ in range(population_size):
             protein_array = list(self.initial)
@@ -78,16 +79,20 @@ class EnergyMaximizerGA:
 
     def _get_last_population(self):
         fname = self._get_last_generation_fname()
-        path = self.dir/fname
-        with open(path, 'r') as f:
+        path = self.dir / fname
+        with open(path, "r") as f:
             generation = json.load(f)
 
-        return [aa_to_num(individual['sequence']) for individual in generation['population']]
+        return [
+            aa_to_num(individual["sequence"]) for individual in generation["population"]
+        ]
 
     def get_initial_population(self):
         if self._generations() == 0:
             logger.info("Generating a population from scratch")
-            return self._generate_initial_population(population_size=self.population_size)
+            return self._generate_initial_population(
+                population_size=self.population_size
+            )
 
         logger.info("Using the last computed population")
         return self._get_last_population()
@@ -103,7 +108,6 @@ class EnergyMaximizerGA:
         population = ga_instance.population
         fitness = ga_instance.last_generation_fitness
 
-
         if population is None:
             raise RuntimeError("Population is None on pygad.GA instance")
 
@@ -113,9 +117,11 @@ class EnergyMaximizerGA:
         filename = self.dir / self._get_generation_fname(generation)
 
         with self.cli.spinner(f"[bright_green] Saving generation to {filename}"):
-
             sequence_fitness_pairs = {
-                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
+                "population": [
+                    {"sequence": "".join(num_to_aa(solution)), "fitness": fit}
+                    for solution, fit in zip(population, fitness)
+                ]
             }
 
             with open(filename, "w") as file:
@@ -125,6 +131,7 @@ class EnergyMaximizerGA:
 
         self.cli.update_progress()
         self.cli.metric_after_generation(self)
+
 
 class GAMetricCalculator:
     def __init__(self, emga: EnergyMaximizerGA):
@@ -136,7 +143,7 @@ class GAMetricCalculator:
         if n < 0:
             n = no_generations + n + 1
 
-        fpath = self.emga.dir / self.emga._get_generation_fname(n-1)
+        fpath = self.emga.dir / self.emga._get_generation_fname(n - 1)
 
         with open(fpath, "r") as f:
             generation = json.load(f)
@@ -145,7 +152,7 @@ class GAMetricCalculator:
 
     def fitness(self, n=-1) -> Iterable[float]:
         generation = self.get_generation_population(n)
-        return map(operator.itemgetter("fitness"),generation["population"])
+        return map(operator.itemgetter("fitness"), generation["population"])
 
     def best_fitness(self, n=-1):
         return max(self.fitness(n))
@@ -170,4 +177,3 @@ class GAMetricCalculator:
 
     def population_size(self):
         return len(self.get_generation_population(-1)["population"])
-
