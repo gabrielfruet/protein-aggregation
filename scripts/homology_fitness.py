@@ -1,6 +1,5 @@
 from matplotlib import pyplot as plt
 import numpy as np
-import scienceplots
 from functools import partial
 
 def homology_fitness(V, D, T):
@@ -23,7 +22,7 @@ if __name__ == '__main__':
         fh = homology_fitness(V=V, D=D, T=T)
         ax.plot(t, fh(t), label=f'$D={D}$')
 
-    ax.set_xticks(ticks=[T -0.05, T, T + 0.05], labels=['$T -5\%$', '$T$', '$ T + 5\%$'])
+    ax.set_xticks(ticks=[T -0.05, T, T + 0.05], labels=[r'$T -5\%$', '$T$', r'$ T + 5\%$'])
     ax.set_ylim(-4*V, 0)
     ax.set_yticks(ticks=[0, -V, -2*V, -3*V], labels=[0, '$-V$', '$-2V$', '$-3V$'])
     ax.axhline(y=-V, xmin=0, xmax=0.5, c='#202020', linewidth=0.5)

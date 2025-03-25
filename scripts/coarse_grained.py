@@ -64,7 +64,7 @@ def calculate_thermostability_score(pdb_path, weights=None):
     # 4. Contact Order (normalized by chain length)
     ca_indices = traj.topology.select("name CA")
     n_ca = len(ca_indices)
-    distances = md.compute_distances(traj, [[i,j] for i in ca_indices 
+    distances = md.compute_distances(traj, [[i,j] for i in ca_indices
                                      for j in ca_indices if j > i])
     contacts = [d < 0.6 for d in distances[0]]  # 6Å cutoff
 

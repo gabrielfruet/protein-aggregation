@@ -12,14 +12,14 @@ def convert_cif_to_pdb(input_cif, output_pdb):
     try:
         # Initialize the parser for CIF files
         parser = PDB.MMCIFParser(QUIET=True)
-        
+
         # Parse the structure
         structure = parser.get_structure("structure", input_cif)
-        
+
         # Initialize the PDBIO writer
         io = PDB.PDBIO()
         io.set_structure(structure)
-        
+
         # Write to the output PDB file
         io.save(output_pdb)
         print(f"Conversion successful: {input_cif} → {output_pdb}")
