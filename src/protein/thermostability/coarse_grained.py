@@ -26,6 +26,24 @@ def calculate_thermostability_score(pdb_path, weights=None):
     }
     weights = weights or default_weights
 
+    metrics = calculate_coarse_grained_metrics(pdb_path)
+
+    score = sum(default_weights[metric] * metrics[metric] for metric in metrics.keys())
+
+    return score
+
+
+def calculate_coarse_grained_metrics(pdb_path):
+    """
+    Calculate a composite thermostability score using coarse-grained structural metrics.
+
+    Args:
+        pdb_path (str): Path to PDB file
+        weights (dict): Dictionary of weights for each metric
+
+    Returns:
+        float: Composite stability score (higher = more stable)
+    """
     traj = md.load(pdb_path)
     traj = traj.atom_slice(traj.topology.select("protein"))
 
@@ -88,11 +106,9 @@ def calculate_thermostability_score(pdb_path, weights=None):
 
     contact_order = np.mean(sequence_seps) / traj.n_residues if sequence_seps else 0
     # Calculate composite score
-    score = (
-        weights["hydrophobic_sasa"] * h_sasa
-        + weights["salt_bridges"] * salt_bridges
-        + weights["packing_density"] * packing_density
-        + weights["contact_order"] * contact_order
-    )
-
-    return score
+    return {
+        "hydrophobic_sasa": h_sasa,
+        "salt_bridges": salt_bridges,
+        "packing_density": packing_density,
+        "contact_order": contact_order,
+    }
