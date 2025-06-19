@@ -27,3 +27,5 @@ logs/
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+
+TemBERTure/

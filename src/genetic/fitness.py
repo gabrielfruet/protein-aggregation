@@ -1,6 +1,7 @@
 from typing import Iterable
 from src.protein.model import SequenceScorePredictor
 from src.genetic.mutation import num_to_aa
+from src.protein.thermostability.temberture import calculate_temberture_score
 
 import logging
 
