@@ -86,6 +86,18 @@ class GeneticAlgorithmConsoleManager:
 
         # Prepare metrics
         current_generation = metric_calc.generation()
+
+        if current_generation == 0:
+            self.panel = Panel(
+                Markdown("# 🧬 Genetic Algorithm Progress\n\nWaiting for the first generation to complete"),
+                title="Genetic Algorithm Metrics",
+                style="bold blue",
+                expand=False
+            )
+            return
+
+        best_melting = metric_calc.best_melting()
+        worst_melting = metric_calc.worst_melting()
         best_fitness = metric_calc.best_fitness()
         worst_fitness = metric_calc.worst_fitness()
         mean_fitness = metric_calc.mean()
@@ -93,10 +105,10 @@ class GeneticAlgorithmConsoleManager:
         population_size = metric_calc.population_size()
 
         # Calculate fitness change (if possible)
-        try:
+        if current_generation > 1:
             best_fitness_change = metric_calc.change_in_best_fitness()
             worst_fitness_change = metric_calc.change_in_worst_fitness()
-        except IndexError:
+        else:
             best_fitness_change = 0
             worst_fitness_change = 0
 
@@ -121,6 +133,13 @@ class GeneticAlgorithmConsoleManager:
         worst_change_style = "green" if worst_fitness_change <= 0 else "red"
         markdown_content.append(f"- **Worst Fitness**: {worst_fitness:.3f} ", style="")
         markdown_content.append(f"({'▼' if worst_fitness_change <= 0 else '▲'} {abs(worst_fitness_change):.3f})\n", style=worst_change_style)
+
+        # Best Melting Temperature
+        markdown_content.append(f"- **Best Melting Temperature**: {best_melting:.3f}\n", style="bold")
+
+        #Worst Melting Temperature
+        markdown_content.append(f"- **Worst Melting Temperature**: {worst_melting:.3f}\n", style="bold")
+
 
         # Mean and Standard Deviation
         markdown_content.append(f"- **Mean Fitness**: {mean_fitness:.3f}\n", style="")

@@ -148,3 +148,4 @@ class SequenceScorePredictor:
     def _update_results(self, result: List[Optional[float]], sequences: List[str], scores: List[float]) -> None:
         for i, (seq, score) in enumerate(zip(sequences, scores)):
             result[sequences.index(seq)] = score
+            

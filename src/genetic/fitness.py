@@ -1,5 +1,5 @@
 from typing import Iterable
-from src.protein.model import SequenceScorePredictor
+#from src.protein.model import SequenceScorePredictor
 from src.genetic.mutation import num_to_aa
 from src.protein.thermostability.temberture import calculate_temberture_score
 
@@ -18,6 +18,10 @@ class TwoStepFitness:
             1. Model predicts the folding structure of the sequence
             2. Score the folded structure
         """
+        try:
+            from src.protein.model import SequenceScorePredictor
+        except ImportError as e:
+            raise RuntimeError("ESMFold dependencies not available") from e
         ssp = SequenceScorePredictor()
 
         if not isinstance(population, Iterable) or not isinstance(population[0], Iterable):
@@ -26,3 +30,15 @@ class TwoStepFitness:
         aa_sequences = ["".join(num_to_aa(num_seq)) for num_seq in population]
         return ssp(aa_sequences)
 
+class TemBERTureFitness:
+    def __call__(self, ga_instance, population: list[list[int]], idxs) -> list[float]:
+        """
+        Compute the fitness function using TemBERTure directly on amino acid sequences.
+        """
+        if not isinstance(population, Iterable) or not isinstance(population[0], Iterable):
+            raise RuntimeError("batch_size should be greater than 1")
+
+        aa_sequences = ["".join(num_to_aa(num_seq)) for num_seq in population]
+        # Apply TemBERTure directly to each sequence
+        return [calculate_temberture_score(seq) for seq in aa_sequences]
+        

@@ -12,8 +12,10 @@ import json
 from pathlib import Path
 import numpy as np
 
-from src.genetic.fitness import TwoStepFitness
+from src.genetic.fitness import TwoStepFitness, TemBERTureFitness
 from src.genetic.mutation import get_aminoacids, aa_to_num, num_to_aa
+
+from src.protein.thermostability.temberture import calculate_temberture_temperature
 
 import logging
 
@@ -34,7 +36,7 @@ class EnergyMaximizerGA:
         self.population_size = population_size
         self.base_color = "bright_cyan"
         self.num_generations = num_generations
-        self.fitness = TwoStepFitness()
+        self.fitness = TemBERTureFitness()
 
         from src.cli.ga import GeneticAlgorithmConsoleManager
         self.cli = GeneticAlgorithmConsoleManager()
@@ -89,8 +91,24 @@ class EnergyMaximizerGA:
             logger.info("Generating a population from scratch")
             return self._generate_initial_population(population_size=self.population_size)
 
-        logger.info("Using the last computed population")
-        return self._get_last_population()
+        #logger.info("Using the last computed population")
+        #return self._get_last_population()
+        logger.info("Trying to use the last computed population")
+        try:
+            last_population = self._get_last_population()
+            if not last_population:
+                raise ValueError("Last population is empty.")
+            logger.info("Successfully loaded last population.")
+            return last_population
+        except (json.JSONDecodeError, FileNotFoundError, ValueError) as e:
+            logger.warning(f"Could not load the last population due to error: {e}. Generating a new population from scratch.")
+            try:
+                path = self.dir / self._get_last_generation_fname()
+                path.unlink()
+                logger.info(f"Removed corrupt generation file: {path}")
+            except FileNotFoundError:
+                pass 
+            return self._generate_initial_population(population_size=self.population_size)
 
     def _get_generation_fname(self, generation: int) -> str:
         filename = f"generation_{generation}.json"
@@ -115,7 +133,7 @@ class EnergyMaximizerGA:
         with self.cli.spinner(f"[bright_green] Saving generation to {filename}"):
 
             sequence_fitness_pairs = {
-                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": fit} for solution, fit in zip(population, fitness)]
+                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": float(fit)} for solution, fit in zip(population, fitness)]
             }
 
             with open(filename, "w") as file:
@@ -147,11 +165,32 @@ class GAMetricCalculator:
         generation = self.get_generation_population(n)
         return map(operator.itemgetter("fitness"),generation["population"])
 
+    def get_best_individual(self, n=-1):
+        generation = self.get_generation_population(n)
+        population = generation.get("population", [])
+        if not population:
+            return None
+        return max(population, key=operator.itemgetter("fitness"))
+    
+    def get_worst_individual(self, n=-1):
+        generation = self.get_generation_population(n)
+        population = generation.get("population", [])
+        if not population:
+            return None
+        return min(population, key=operator.itemgetter("fitness"))
+
+
     def best_fitness(self, n=-1):
         return max(self.fitness(n))
 
     def worst_fitness(self, n=-1):
         return min(self.fitness(n))
+    
+    def best_melting(self, n=-1):  
+        return calculate_temberture_temperature(self.get_best_individual(n)["sequence"])
+    
+    def worst_melting(self, n=-1):
+        return calculate_temberture_temperature(self.get_worst_individual(n)["sequence"])
 
     def change_in_best_fitness(self):
         return self.best_fitness(-1) - self.best_fitness(-2)
