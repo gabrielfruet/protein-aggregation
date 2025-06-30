@@ -1,16 +1,13 @@
 version: '3.8'
 
 services:
-  # Serviço 1: O Algoritmo Genético (seu ambiente de trabalho principal)
   genetic-algorithm:
     build:
       context: .
-      dockerfile: Dockerfile  # Usará seu Dockerfile principal (que vamos ajustar)
+      dockerfile: Dockerfile  
     volumes:
       - .:/workspaces/protein-aggregation
-    # Mantém o container rodando para o VS Code se conectar
     command: sleep infinity
-    # Conecta este container à GPU, se disponível
     deploy:
       resources:
         reservations:
@@ -19,12 +16,10 @@ services:
               count: 1
               capabilities: [gpu]
 
-  # Serviço 2: O Microsserviço do ESMFold (a "caixa preta")
   esmfold-service:
     build:
       context: .
-      dockerfile: Dockerfile.esmfold # Usará um novo Dockerfile só para ele
-    # Expõe a porta 5001 para que o outro container possa acessá-la
+      dockerfile: Dockerfile.esmfold 
     ports:
       - "5001:5001"
     deploy:
