@@ -43,6 +43,7 @@ def _load_esmfold_model() -> ESMFold:
         cli.log("[bright_green]Successfully loaded esmfold_v1")
 
     return esmfold_v1_model
+
 class SequenceScorePredictor:
     def __init__(
         self,

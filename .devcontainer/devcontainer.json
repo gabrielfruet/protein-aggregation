@@ -1,19 +1,21 @@
 {
-    "name": "Bioinformatics Development Container",
-    "build": {
-        "dockerfile": "../Dockerfile"
-    },
-    "containerUser": "bio",
-    "runArgs": ["-w","/workspaces/bioinformatics", "--gpus", "all", "--name" ,"bioinformatics-development"]
+	"name": "Bioinformatics Development Container",
 
-    "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-python.python"
-        // Você pode adicionar outras extensões favoritas aqui.
-        // Por exemplo: "eamodio.gitlens", "ms-azuretools.vscode-docker"
-      ]
-    }
-  }
+	"dockerComposeFile": "../docker-compose.yml",
+
+	"service": "genetic-algorithm",
+
+	"workspaceFolder": "/workspaces/protein-aggregation",
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-toolsai.jupyter",
+				"ms-python.vscode-pylance"
+			]
+		}
+	},
+
+	"remoteUser": "bio"
 }
-

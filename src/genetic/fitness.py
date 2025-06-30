@@ -39,6 +39,6 @@ class TemBERTureFitness:
             raise RuntimeError("batch_size should be greater than 1")
 
         aa_sequences = ["".join(num_to_aa(num_seq)) for num_seq in population]
-        # Apply TemBERTure directly to each sequence
+        
         return [calculate_temberture_score(seq) for seq in aa_sequences]
         

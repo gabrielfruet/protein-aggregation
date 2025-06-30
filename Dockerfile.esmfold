@@ -1,0 +1,13 @@
+# Usa a imagem que já funciona, sem modificações
+FROM athbaltzis/esmfold:1.1.0
+
+WORKDIR /app
+
+# Instala o Flask para criarmos a API
+RUN pip install Flask
+
+# Copia apenas o script da nossa API para dentro do container
+COPY api.py .
+
+# Comando para iniciar o servidor da API quando o container rodar
+CMD ["flask", "--app", "api", "run", "--host=0.0.0.0", "--port=5001"]
