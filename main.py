@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     emga = EnergyMaximizerGA(
         population_size=64,
-        num_parents_mating=32,
+        num_parents_mating=20,
         crossover_type='uniform',
         mutation_type='random',
         crossover_probability=0.2,

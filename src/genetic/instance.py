@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 import numpy as np
 
-from src.genetic.fitness import TwoStepFitness, TemBERTureFitness
+from src.genetic.fitness import TwoStepFitness, TemBERTureFitness,CombinedFitness, CombinedFitnessAsync
 from src.genetic.mutation import get_aminoacids, aa_to_num, num_to_aa
-
+from src.protein.index import ProteinIndex
 from src.protein.thermostability.temberture import calculate_temberture_temperature
 
 import logging
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class EnergyMaximizerGA:
     filename="energy_maximizer_instance"
     def __init__(self,
-                 directory='./genetic_instances/instance1', 
+                 directory='./genetic_instances/instance2', 
                  initial = "GIVEQCCTSICSLYQLENYCNFVNQHLCGSHLVEALYLVCGERGFFYTPKA",
                  num_generations=2,
                  num_parents_mating=10,
@@ -36,7 +36,8 @@ class EnergyMaximizerGA:
         self.population_size = population_size
         self.base_color = "bright_cyan"
         self.num_generations = num_generations
-        self.fitness = TemBERTureFitness()
+        self.protein_index = ProteinIndex()
+        self.fitness = CombinedFitnessAsync(protein_index=self.protein_index)
 
         from src.cli.ga import GeneticAlgorithmConsoleManager
         self.cli = GeneticAlgorithmConsoleManager()
@@ -132,8 +133,29 @@ class EnergyMaximizerGA:
 
         with self.cli.spinner(f"[bright_green] Saving generation to {filename}"):
 
+            #sequence_fitness_pairs = {
+            #    'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": float(fit)} for solution, fit in zip(population, fitness)]
+            #}
+            
+            population_details = []
+            for solution, fit in zip(population, fitness):
+                sequence = "".join(num_to_aa(solution))
+                
+                index_entry = self.protein_index.get_metadata(sequence)
+                metadata = index_entry.get("metadata", {}) if index_entry else {}
+                
+                thermostability = metadata.get("thermostability", "N/A") if metadata else "N/A"
+                aggregation = metadata.get("aggregation", "N/A") if metadata else "N/A"
+
+                population_details.append({
+                    "sequence": sequence,
+                    "fitness": float(fit),
+                    "thermostability": thermostability,
+                    "aggregation": aggregation
+                })
+
             sequence_fitness_pairs = {
-                'population':[{"sequence": "".join(num_to_aa(solution)), "fitness": float(fit)} for solution, fit in zip(population, fitness)]
+                'population': population_details
             }
 
             with open(filename, "w") as file:

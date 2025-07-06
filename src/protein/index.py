@@ -10,6 +10,7 @@ import re
 from io import StringIO
 import asyncio
 import logging
+import hashlib
 
 from src.logging.timer import TimerLogger
 
@@ -121,7 +122,7 @@ class ProteinIndex:
         return destination
 
 
-    def _save_pdb(self, pdb_content, metadata):
+    def _save_pdb(self, sequence, pdb_content, metadata):
         """
         Saves a PDB file to a destination and updates the indices with the sequence and file metadata.
 
@@ -136,11 +137,11 @@ class ProteinIndex:
             ValueError: If the sequence cannot be inferred from the PDB content.
             RuntimeError: If the PDB file cannot be saved to the destination.
         """
-        try:
-            sequence = self._infer_sequence_from_pdb_content(pdb_content)
-        except Exception as e:
-            logger.error(f"Failed to infer sequence from PDB content: {e}")
-            raise ValueError("Could not infer sequence from PDB content") from e
+        #try:
+        #    sequence = self._infer_sequence_from_pdb_content(pdb_content)
+        #except Exception as e:
+        #    logger.error(f"Failed to infer sequence from PDB content: {e}")
+        #    raise ValueError("Could not infer sequence from PDB content") from e
 
         if sequence in self.indices:
             logger.debug(f"ALREADY CACHED {sequence=} on index")
@@ -156,21 +157,17 @@ class ProteinIndex:
 
         return destination
 
-    def save(self, pdb_files: Union[str, List[str]], metadata: Optional[Dict] = None):
-        """Save a PDB content or multiple PDB contents to the index.
-        Args:
-            pdb_files (Union[str, List[str]]): PDB content as a string or list of strings.
-            metadata (Optional[Dict]): Metadata to associate with the sequence.
+    def save(self, sequence: str, pdb_content: str, metadata: Optional[Dict] = None):
         """
-        if isinstance(pdb_files, str):
-            pdb_files = [pdb_files]
-
-        with timer_logger(task=f'SAVING {len(pdb_files)} pdbs to index'):
+        Save a single PDB content to the index with its known sequence.
+        """
+        # The old loop is removed. We now only save one PDB at a time.
+        with timer_logger(task=f'SAVING 1 pdb to index'):
             try:
-                for pdb_content in pdb_files:
-                    self._save_pdb(pdb_content, metadata)
+                # We call the corrected _save_pdb with the sequence
+                self._save_pdb(sequence, pdb_content, metadata)
             except Exception as e:
-                raise RuntimeError("Failed to save PDB files to index") from e
+                raise RuntimeError("Failed to save PDB file to index") from e
             finally:
                 self._save_indices()
 
@@ -203,7 +200,7 @@ class ProteinIndex:
             ValueError: If the sequence is not found in the index.
         """
         if sequence not in self.indices:
-            raise ValueError(f"Sequence {sequence} not found in the index.")
+            self.indices[sequence] = {"metadata": {}}
 
         self.indices[sequence]["metadata"].update(metadata)
 

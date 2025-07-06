@@ -4,28 +4,27 @@ import torch
 
 app = Flask(__name__)
 
-# Carrega o modelo ESMFold uma única vez quando o servidor inicia
-print("Carregando o modelo ESMFold...")
+print("Loading ESMFold model...")
 model = esm.pretrained.esmfold_v1()
 model = model.eval().cuda()
-print("Modelo carregado com sucesso!")
+print("Model successfully loaded!")
 
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
     if not data or 'sequence' not in data:
-        return jsonify({"error": "Sequência não fornecida"}), 400
+        return jsonify({"error": "Sequence not provided"}), 400
 
     sequence = data['sequence']
     
     try:
-        print(f"Processando sequência: {sequence[:15]}...")
+        print(f"Processin sequence: {sequence[:15]}...")
         with torch.no_grad():
             pdb_output = model.infer_pdb(sequence)
-        print("Predição concluída com sucesso.")
+        print("Prediction conluded.")
         return jsonify({"pdb": pdb_output})
     except Exception as e:
-        print(f"Erro durante a predição: {e}")
+        print(f"Error during prediction: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
